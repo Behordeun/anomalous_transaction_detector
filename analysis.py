@@ -8,11 +8,11 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 from dateutil import parser as date_parser
+from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.decomposition import PCA
 
-from parsing_utils import parse_log
+from parsing_utils import parse_log, parse_datetime
 
 # Setup logging for production
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -83,43 +83,6 @@ def convert_amount(val) -> Tuple[float, Optional[str]]:
     return (amount, currency)
 
 
-def parse_datetime(dt_str: str) -> Optional[datetime]:
-    """Parse a date/time string into a :class:`datetime` object.
-
-
-    The raw timestamps in the logs come in two primary formats:
-
-    - ISO style "YYYY-MM-DD HH:MM:SS" (e.g. "2025-07-05 19:18:10")
-    - European style "DD/MM/YYYY HH:MM:SS" (e.g. "24/07/2025 22:47:06")
-
-    Using ``dayfirst=True`` unconditionally can lead to mis-parsed
-    values for ISO strings (interpreting ``2025-06-12`` as
-    ``2025-12-06``).  To mitigate this, we infer the correct
-    ``dayfirst`` flag based on the delimiter present.  If the
-    timestamp contains a forward slash ``/`` we assume day comes
-    first; otherwise we assume the canonical ISO ordering.
-
-    Parameters
-    ----------
-    dt_str : str
-        Date/time string extracted from a log.
-
-    Returns
-    -------
-    datetime or None
-        Parsed datetime or ``None`` if parsing fails.
-    """
-    if pd.isna(dt_str):
-        return None
-    dt_str = dt_str.strip()
-    if not dt_str:
-        return None
-    # Determine the appropriate day/month ordering
-    dayfirst = "/" in dt_str
-    try:
-        return date_parser.parse(dt_str, dayfirst=dayfirst)
-    except (ValueError, TypeError):
-        return None
 
 
 def _add_basic_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -396,7 +359,9 @@ def explain_anomalies(df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
 ###############################################################################
 
 
-def create_visualisations(df: pd.DataFrame, output_dir: str) -> None:
+def create_visualisations(
+    df: pd.DataFrame, output_dir: str, method: str = "isolation_forest"
+) -> None:
     """Generate a set of diagnostic plots and save them to disk.
 
     Currently this function produces:
@@ -506,23 +471,28 @@ def create_visualisations(df: pd.DataFrame, output_dir: str) -> None:
     # 6. Location-based anomaly heatmap (if enough unique locations)
     if "location" in df and "anomaly_label" in df:
         # Normalize location names to avoid duplicates due to whitespace/case
-            # Use normalized location from parsing step if available
-            location_col = "location_norm" if "location_norm" in df.columns else "location"
-            loc_counts = (
-                df.drop_duplicates(subset=[location_col, "anomaly_label", "user", "timestamp"])
-                  .groupby([location_col, "anomaly_label"])
-                  .size().reset_index(name="count")
+        # Use normalized location from parsing step if available
+        location_col = "location_norm" if "location_norm" in df.columns else "location"
+        loc_counts = (
+            df.drop_duplicates(
+                subset=[location_col, "anomaly_label", "user", "timestamp"]
             )
-            loc_counts["anomaly_status"] = loc_counts["anomaly_label"].map({0: "Normal", 1: "Anomaly"})
-            fig6 = px.bar(
-                loc_counts,
-                x=location_col,
-                y="count",
-                color="anomaly_status",
-                title="Anomaly frequency by location",
-                color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
-            )
-            fig6.write_html(os.path.join(output_dir, "location_anomaly.html"))
+            .groupby([location_col, "anomaly_label"])
+            .size()
+            .reset_index(name="count")
+        )
+        loc_counts["anomaly_status"] = loc_counts["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
+        )
+        fig6 = px.bar(
+            loc_counts,
+            x=location_col,
+            y="count",
+            color="anomaly_status",
+            title="Anomaly frequency by location",
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
+        )
+        fig6.write_html(os.path.join(output_dir, "location_anomaly.html"))
 
     # 7. User-level anomaly frequency
     if "user" in df and "anomaly_label" in df:
@@ -669,10 +639,15 @@ def save_features_with_scores(
 
 
 def run_pipeline(
-    input_path: str, output_dir: str, contamination: float = 0.02, top_n: int = 30
+    input_path: str,
+    output_dir: str,
+    contamination: float = 0.02,
+    top_n: int = 30,
+    method: str = "isolation_forest",
 ) -> None:
     """Execute the full anomaly detection pipeline."""
-    os.makedirs(output_dir, exist_ok=True)
+    method_output_dir = os.path.join(output_dir, method)
+    os.makedirs(method_output_dir, exist_ok=True)
     numeric_cols = [
         "amount_value",
         "time_diff_hours",
@@ -689,52 +664,63 @@ def run_pipeline(
     # 2. Parse logs into structured columns
     # Diagnostic: collect parse status for each log
     parsing_diagnostics = []
+
     def diagnostic_safe_parse(log):
         try:
             parsed = parse_log(log)
             if parsed is None:
-                parsing_diagnostics.append({
-                    'original_log': log,
-                    'parsed': {},
-                    'status': 'failed',
-                    'warning': 'Failed to parse',
-                    'fields_found': 0,
-                    'reason': 'No fields extracted'
-                })
+                parsing_diagnostics.append(
+                    {
+                        "original_log": log,
+                        "parsed": {},
+                        "status": "failed",
+                        "warning": "Failed to parse",
+                        "fields_found": 0,
+                        "reason": "No fields extracted",
+                    }
+                )
                 return None
             # Count fields found
-            found_fields = parsed.get('fields_found', []) if isinstance(parsed, dict) else []
+            found_fields = (
+                parsed.get("fields_found", []) if isinstance(parsed, dict) else []
+            )
             n_fields = len(found_fields)
             # Heuristic: partial if missing any of timestamp, user, type, amount
-            required_keys = ['timestamp', 'user', 'type', 'amount']
+            required_keys = ["timestamp", "user", "type", "amount"]
             if not all(k in parsed and parsed.get(k) for k in required_keys):
-                parsing_diagnostics.append({
-                    'original_log': log,
-                    'parsed': parsed,
-                    'status': 'partial',
-                    'warning': 'Missing required fields',
-                    'fields_found': n_fields,
-                    'reason': f'Fields found: {found_fields}'
-                })
+                parsing_diagnostics.append(
+                    {
+                        "original_log": log,
+                        "parsed": parsed,
+                        "status": "partial",
+                        "warning": "Missing required fields",
+                        "fields_found": n_fields,
+                        "reason": f"Fields found: {found_fields}",
+                    }
+                )
             else:
-                parsing_diagnostics.append({
-                    'original_log': log,
-                    'parsed': parsed,
-                    'status': 'full',
-                    'warning': '',
-                    'fields_found': n_fields,
-                    'reason': 'All required fields found'
-                })
+                parsing_diagnostics.append(
+                    {
+                        "original_log": log,
+                        "parsed": parsed,
+                        "status": "full",
+                        "warning": "",
+                        "fields_found": n_fields,
+                        "reason": "All required fields found",
+                    }
+                )
             return parsed
         except Exception as e:
-            parsing_diagnostics.append({
-                'original_log': log,
-                'parsed': {},
-                'status': 'failed',
-                'warning': str(e),
-                'fields_found': 0,
-                'reason': f'Exception: {str(e)}'
-            })
+            parsing_diagnostics.append(
+                {
+                    "original_log": log,
+                    "parsed": {},
+                    "status": "failed",
+                    "warning": str(e),
+                    "fields_found": 0,
+                    "reason": f"Exception: {str(e)}",
+                }
+            )
             logging.warning(f"Failed to parse log: {log} | Error: {e}")
             return None
 
@@ -742,9 +728,20 @@ def run_pipeline(
     df_parsed = pd.DataFrame([rec for rec in df_parsed if rec is not None])
     # Export diagnostic report
     import csv
-    diag_path = os.path.join(output_dir, "diagnostic_parsing_report.csv")
-    with open(diag_path, "w", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=["original_log", "parsed", "status", "warning", "fields_found", "reason"])
+
+    diag_path = os.path.join(method_output_dir, "diagnostic_parsing_report.csv")
+    with open(diag_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "original_log",
+                "parsed",
+                "status",
+                "warning",
+                "fields_found",
+                "reason",
+            ],
+        )
         writer.writeheader()
         for row in parsing_diagnostics:
             # Write parsed as string for CSV
@@ -755,7 +752,7 @@ def run_pipeline(
     if df_parsed.empty:
         logging.error(NO_VALID_LOGS_ERROR)
         raise ValueError(NO_VALID_LOGS_ERROR)
-    save_parsed_logs(df_parsed, output_dir, numeric_cols)
+    save_parsed_logs(df_parsed, method_output_dir, numeric_cols)
 
     # 3. Feature engineering
     df_features = engineer_features(df_parsed)
@@ -789,15 +786,17 @@ def run_pipeline(
 
     # 6. Interpret top anomalies
     explained = explain_anomalies(df_features, top_n=top_n)
-    save_explained_anomalies(explained, output_dir, numeric_cols)
+    save_explained_anomalies(explained, method_output_dir, numeric_cols)
 
     # 7. Create visualisations
-    create_visualisations(df_features, output_dir=output_dir)
+    create_visualisations(df_features, output_dir=method_output_dir, method=method)
 
     # 8. Save the full feature set with scores
-    save_features_with_scores(df_features, output_dir, numeric_cols)
+    save_features_with_scores(df_features, method_output_dir, numeric_cols)
 
-    logging.info(f"Pipeline completed successfully. Outputs saved to {output_dir}")
+    logging.info(
+        f"Pipeline completed successfully. Outputs saved to {method_output_dir}"
+    )
 
 
 def main():
@@ -837,37 +836,72 @@ def main():
 if __name__ == "__main__":
     main()
 
+
 def rule_based_anomaly_detection(df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
     """Rule-based: amount > threshold AND new location for user."""
     threshold = 3000
     df = df.copy()
-    df["amount_value"] = df["amount"].apply(lambda x: float(str(x).replace(",", "").replace("€", "").replace("$", "").replace("£", "")) if pd.notna(x) else 0)
+    df["amount_value"] = df["amount"].apply(
+        lambda x: (
+            float(
+                str(x)
+                .replace(",", "")
+                .replace("€", "")
+                .replace("$", "")
+                .replace("£", "")
+            )
+            if pd.notna(x)
+            else 0
+        )
+    )
     df = df.sort_values(["user", "timestamp"])
     df["prev_location"] = df.groupby("user")["location"].shift(1)
     df["is_new_location"] = (df["location"] != df["prev_location"]).astype(int)
-    df["anomaly_label"] = ((df["amount_value"] > threshold) & (df["is_new_location"] == 1)).astype(int)
+    df["anomaly_label"] = (
+        (df["amount_value"] > threshold) & (df["is_new_location"] == 1)
+    ).astype(int)
     df["anomaly_score"] = df["amount_value"] * df["is_new_location"]
     df["anomaly_status"] = df["anomaly_label"].map({0: "Normal", 1: "Anomaly"})
-    df["explanation"] = np.where(df["anomaly_label"] == 1, "High amount + new location", "Rule not triggered")
+    df["explanation"] = np.where(
+        df["anomaly_label"] == 1, "High amount + new location", "Rule not triggered"
+    )
     return df.sort_values("anomaly_score", ascending=False).head(top_n)
 
-def sequence_modeling_anomaly_detection(df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
+
+def sequence_modeling_anomaly_detection(
+    df: pd.DataFrame, top_n: int = 20
+) -> pd.DataFrame:
     """Sequence modeling: flag rare transitions in user location sequence (Markov Chain)."""
     df = df.copy()
     df = df.sort_values(["user", "timestamp"])
-    df["prev_location"] = df.groupby("user")['location'].shift(1)
-    transitions = df.groupby(["prev_location", "location"]).size().reset_index(name="count")
+    df["prev_location"] = df.groupby("user")["location"].shift(1)
+    transitions = (
+        df.groupby(["prev_location", "location"]).size().reset_index(name="count")
+    )
     # Relax threshold: transitions seen ≤ 3 times
-    rare_transitions = transitions[transitions["count"] <= 3][["prev_location", "location"]]
-    rare_transition_set = {(row["prev_location"], row["location"]) for _, row in rare_transitions.iterrows()}
-    df["anomaly_label"] = df.apply(lambda row: int((row["prev_location"], row["location"]) in rare_transition_set), axis=1)
+    rare_transitions = transitions[transitions["count"] <= 3][
+        ["prev_location", "location"]
+    ]
+    rare_transition_set = {
+        (row["prev_location"], row["location"])
+        for _, row in rare_transitions.iterrows()
+    }
+    df["anomaly_label"] = df.apply(
+        lambda row: int((row["prev_location"], row["location"]) in rare_transition_set),
+        axis=1,
+    )
     df["anomaly_score"] = df["anomaly_label"]
     df["anomaly_status"] = df["anomaly_label"].map({0: "Normal", 1: "Anomaly"})
-    df["explanation"] = np.where(df["anomaly_label"] == 1, "Rare location transition", "Common transition")
+    df["explanation"] = np.where(
+        df["anomaly_label"] == 1, "Rare location transition", "Common transition"
+    )
     # Always return top N rare transitions
     return df[df["anomaly_label"] == 1].head(top_n)
 
-def embedding_autoencoder_anomaly_detection(df: pd.DataFrame, top_n: int = 20) -> pd.DataFrame:
+
+def embedding_autoencoder_anomaly_detection(
+    df: pd.DataFrame, top_n: int = 20
+) -> pd.DataFrame:
     """Embedding + autoencoder: PCA reconstruction error on text fields."""
     df = df.copy()
     text_fields = ["type", "location", "device"]
@@ -875,14 +909,20 @@ def embedding_autoencoder_anomaly_detection(df: pd.DataFrame, top_n: int = 20) -
         df[col] = df[col].astype(str)
     X = pd.get_dummies(df[text_fields])
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    pca = PCA(n_components=min(10, X_scaled.shape[1]))
-    X_pca = pca.fit_transform(X_scaled)
+    x_scaled = scaler.fit_transform(X)
+    pca = PCA(n_components=min(10, x_scaled.shape[1]))
+    X_pca = pca.fit_transform(x_scaled)
     X_reconstructed = pca.inverse_transform(X_pca)
-    reconstruction_error = np.mean((X_scaled - X_reconstructed) ** 2, axis=1)
+    reconstruction_error = np.mean((x_scaled - X_reconstructed) ** 2, axis=1)
     threshold = np.percentile(reconstruction_error, 98)
     df["anomaly_score"] = reconstruction_error
     df["anomaly_label"] = (reconstruction_error > threshold).astype(int)
     df["anomaly_status"] = df["anomaly_label"].map({0: "Normal", 1: "Anomaly"})
-    df["explanation"] = np.where(df["anomaly_label"] == 1, "Unusual text pattern detected", "Normal pattern")
-    return df[df["anomaly_label"] == 1].sort_values("anomaly_score", ascending=False).head(top_n)
+    df["explanation"] = np.where(
+        df["anomaly_label"] == 1, "Unusual text pattern detected", "Normal pattern"
+    )
+    return (
+        df[df["anomaly_label"] == 1]
+        .sort_values("anomaly_score", ascending=False)
+        .head(top_n)
+    )

@@ -1,20 +1,35 @@
 import logging
+import os
 
 import pandas as pd
 import streamlit as st
-import os
 
-from analysis import (
-    engineer_features,
-    explain_anomalies,
-    fit_isolation_forest,
-    parse_log,
-    prepare_features_for_model,
-    score_anomalies,
-    rule_based_anomaly_detection,
-    sequence_modeling_anomaly_detection,
-    embedding_autoencoder_anomaly_detection
-)
+try:
+    from analysis import (
+        embedding_autoencoder_anomaly_detection,
+        engineer_features,
+        explain_anomalies,
+        fit_isolation_forest,
+        prepare_features_for_model,
+        rule_based_anomaly_detection,
+        score_anomalies,
+        sequence_modeling_anomaly_detection,
+    )
+    from parsing_utils import parse_log
+except ImportError:
+    import sys
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from analysis import (
+        embedding_autoencoder_anomaly_detection,
+        engineer_features,
+        explain_anomalies,
+        fit_isolation_forest,
+        prepare_features_for_model,
+        rule_based_anomaly_detection,
+        score_anomalies,
+        sequence_modeling_anomaly_detection,
+    )
+    from parsing_utils import parse_log
 
 # Custom CSS for professional look
 st.markdown(
@@ -58,10 +73,10 @@ method = st.sidebar.selectbox(
         "Rule-based",
         "Isolation Forest (Statistical)",
         "Sequence Modeling",
-        "Embedding + Autoencoder"
+        "Embedding + Autoencoder",
     ],
     index=1,
-    help="Select the anomaly detection method to use."
+    help="Select the anomaly detection method to use.",
 )
 contamination = st.sidebar.slider(
     "Anomaly contamination rate", 0.01, 0.10, 0.02, 0.01, key="contamination_slider"
@@ -341,62 +356,89 @@ def show_dynamic_report(df_features, explained, top_n):
 
 def show_time_series_anomalies(df_features, key=None):
     import plotly.express as px
+
     if "dt" in df_features and "anomaly_label" in df_features:
-        ts = df_features[df_features["anomaly_label"] == 1].copy()
+        ts = df_features.copy()
         ts["date"] = ts["dt"].dt.date
-        ts_counts = ts.groupby(["date"]).size().reset_index(name="count")
+        ts_counts = (
+            ts.groupby(["date", "anomaly_label"]).size().reset_index(name="count")
+        )
+        ts_counts["anomaly_status"] = ts_counts["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
+        )
         fig = px.line(
             ts_counts,
             x="date",
             y="count",
-            title="Anomaly frequency over time",
+            color="anomaly_status",
+            title="Transaction frequency over time",
             markers=True,
-            color_discrete_sequence=["#d62728"],
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
         )
         st.plotly_chart(fig, use_container_width=True, key=key)
 
+
 def show_device_usage_patterns(df_features, key=None):
     import plotly.express as px
+
     if "device" in df_features and "anomaly_label" in df_features:
         device_counts = (
-            df_features[df_features["anomaly_label"] == 1]
-            .groupby(["device"])
+            df_features.groupby(["device", "anomaly_label"])
             .size()
             .reset_index(name="count")
+        )
+        device_counts["anomaly_status"] = device_counts["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
         )
         fig = px.bar(
             device_counts,
             x="device",
             y="count",
-            title="Device usage (Anomalies only)",
-            color_discrete_sequence=["#d62728"],
+            color="anomaly_status",
+            title="Device usage patterns",
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
         )
         st.plotly_chart(fig, use_container_width=True, key=key)
 
+
 def show_location_heatmap(df_features, key=None):
     import plotly.express as px
-    location_col = "location_norm" if "location_norm" in df_features.columns else "location"
+
+    location_col = (
+        "location_norm" if "location_norm" in df_features.columns else "location"
+    )
     if location_col in df_features and "anomaly_label" in df_features:
         loc_counts = (
-            df_features[df_features["anomaly_label"] == 1]
-            .drop_duplicates(subset=[location_col, "user", "timestamp"])
-            .groupby([location_col])
+            df_features.drop_duplicates(
+                subset=[location_col, "anomaly_label", "user", "timestamp"]
+            )
+            .groupby([location_col, "anomaly_label"])
             .size()
             .reset_index(name="count")
+        )
+        loc_counts["anomaly_status"] = loc_counts["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
         )
         fig = px.bar(
             loc_counts,
             x=location_col,
             y="count",
-            title="Anomaly frequency by location",
-            color_discrete_sequence=["#d62728"],
+            color="anomaly_status",
+            title="Transaction frequency by location",
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
         )
         st.plotly_chart(fig, use_container_width=True, key=key)
 
+
 def show_geospatial_anomaly_map(df_features, key=None):
     import plotly.express as px
+
     if "latitude" in df_features and "longitude" in df_features:
-        geo_df = df_features[(df_features["anomaly_label"] == 1) & df_features["latitude"].notna() & df_features["longitude"].notna()]
+        geo_df = df_features[
+            (df_features["anomaly_label"] == 1)
+            & df_features["latitude"].notna()
+            & df_features["longitude"].notna()
+        ]
         if not geo_df.empty:
             fig = px.scatter_mapbox(
                 geo_df,
@@ -412,36 +454,47 @@ def show_geospatial_anomaly_map(df_features, key=None):
             fig.update_layout(mapbox_style="open-street-map")
             st.plotly_chart(fig, use_container_width=True, key=key)
 
+
 def show_user_anomaly_frequency(df_features, key=None):
     import plotly.express as px
+
     if "user" in df_features and "anomaly_label" in df_features:
         user_counts = (
-            df_features[df_features["anomaly_label"] == 1]
-            .groupby(["user"])
+            df_features.groupby(["user", "anomaly_label"])
             .size()
             .reset_index(name="count")
+        )
+        user_counts["anomaly_status"] = user_counts["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
         )
         fig = px.bar(
             user_counts,
             x="user",
             y="count",
-            title="User-level anomaly frequency",
-            color_discrete_sequence=["#d62728"],
+            color="anomaly_status",
+            title="User-level transaction frequency",
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
         )
         st.plotly_chart(fig, use_container_width=True, key=key)
 
+
 def show_amount_boxplot(df_features, key=None):
     import plotly.express as px
+
     if "amount_value" in df_features and "type" in df_features:
-        anomalies = df_features[df_features["anomaly_label"] == 1]
+        df_features["anomaly_status"] = df_features["anomaly_label"].map(
+            {0: "Normal", 1: "Anomaly"}
+        )
         fig = px.box(
-            anomalies,
+            df_features,
             x="type",
             y="amount_value",
-            title="Transaction amount distribution by type (Anomalies only)",
-            color_discrete_sequence=["#d62728"],
+            color="anomaly_status",
+            title="Transaction amount distribution by type",
+            color_discrete_map={"Normal": "#2ca02c", "Anomaly": "#d62728"},
         )
         st.plotly_chart(fig, use_container_width=True, key=key)
+
 
 def show_visualizations(df_features):
     """
@@ -458,6 +511,7 @@ def show_visualizations(df_features):
     show_geospatial_anomaly_map(df_features, key="full_geo_map")
     show_user_anomaly_frequency(df_features, key="full_user_anomaly")
     show_amount_boxplot(df_features, key="full_amount_boxplot")
+
 
 def show_top_anomalies(explained):
     """
@@ -499,12 +553,10 @@ def display_file_info(input_file, use_example, example_path):
             st.sidebar.markdown(f"**Size:** {size/1024:.1f} KB")
     elif use_example:
         name, size = file_info(example_path)
-        # st.sidebar.markdown("**Using example file:**")
-        # if size:
-        #     st.sidebar.markdown(f"**Size:** {size/1024:.1f} KB")
 
 
 def _detect_anomalies(df_parsed, contamination, top_n, method):
+
     if method == "Rule-based":
         df_features = df_parsed.copy()
         explained = rule_based_anomaly_detection(df_features, top_n)
@@ -524,13 +576,32 @@ def _detect_anomalies(df_parsed, contamination, top_n, method):
         st.error("Unknown method selected.")
         return None, None
 
+
 def _show_results(df_features, explained, top_n):
-    # Ensure anomaly_label and related columns exist in df_features
-    required_cols = ["anomaly_label", "anomaly_score", "anomaly_status", "explanation"]
-    for col in required_cols:
-        if col not in df_features.columns and col in explained.columns:
-            df_features[col] = explained[col]
     if df_features is not None and explained is not None:
+        # For non-Isolation Forest methods, merge anomaly info back to full dataset
+        if len(df_features) != len(explained) and "anomaly_label" in explained.columns:
+            # Create full dataset with default normal labels
+            df_features["anomaly_label"] = 0
+            df_features["anomaly_score"] = 0.0
+            df_features["anomaly_status"] = "Normal"
+
+            # Update with anomaly information where available
+            if "timestamp" in df_features.columns and "timestamp" in explained.columns:
+                anomaly_indices = df_features["timestamp"].isin(explained["timestamp"])
+                df_features.loc[anomaly_indices, "anomaly_label"] = 1
+                df_features.loc[anomaly_indices, "anomaly_status"] = "Anomaly"
+                # Map scores if available
+                if "anomaly_score" in explained.columns:
+                    score_map = dict(
+                        zip(explained["timestamp"], explained["anomaly_score"])
+                    )
+                    df_features.loc[anomaly_indices, "anomaly_score"] = (
+                        df_features.loc[anomaly_indices, "timestamp"]
+                        .map(score_map)
+                        .fillna(0.0)
+                    )
+
         show_dynamic_report(df_features, explained, top_n)
         show_visualizations(df_features)
         show_top_anomalies(explained)
@@ -544,11 +615,14 @@ def _show_results(df_features, explained, top_n):
                 mime="text/csv",
             )
         else:
-            st.warning("Top anomalies could not be exported as CSV because the result is not a DataFrame.")
+            st.warning(
+                "Top anomalies could not be exported as CSV because the result is not a DataFrame."
+            )
     else:
         st.info(
             "Upload a CSV or Excel file with a 'raw_log' column or use the example dataset."
         )
+
 
 def handle_processing(input_file, example_path, contamination, top_n):
     """
@@ -562,7 +636,9 @@ def handle_processing(input_file, example_path, contamination, top_n):
     with st.spinner("Processing file and running analysis..."):
         df_parsed = load_and_parse_data(input_file, example_path)
     if df_parsed is not None and not df_parsed.empty:
-        df_features, explained = _detect_anomalies(df_parsed, contamination, top_n, method)
+        df_features, explained = _detect_anomalies(
+            df_parsed, contamination, top_n, method
+        )
         _show_results(df_features, explained, top_n)
     else:
         st.info(
@@ -584,9 +660,7 @@ def main():
     if process_clicked:
         handle_processing(input_file, example_path, contamination, top_n)
     else:
-        st.info(
-            "Upload a CSV or Excel file and click 'Process' to run analysis."
-        )
+        st.info("Upload a CSV or Excel file and click 'Process' to run analysis.")
 
 
 if __name__ == "__main__":

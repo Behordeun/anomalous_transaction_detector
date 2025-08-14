@@ -1,6 +1,47 @@
-import re
 import logging
+
+import re
 from typing import Any, Dict, Optional
+from datetime import datetime
+import pandas as pd
+from dateutil import parser as date_parser
+
+def parse_datetime(dt_str: str) -> Optional[datetime]:
+    """Parse a date/time string into a :class:`datetime` object.
+
+    The raw timestamps in the logs come in two primary formats:
+
+    - ISO style "YYYY-MM-DD HH:MM:SS" (e.g. "2025-07-05 19:18:10")
+    - European style "DD/MM/YYYY HH:MM:SS" (e.g. "24/07/2025 22:47:06")
+
+    Using ``dayfirst=True`` unconditionally can lead to mis-parsed
+    values for ISO strings (interpreting ``2025-06-12`` as
+    ``2025-12-06``).  To mitigate this, we infer the correct
+    ``dayfirst`` flag based on the delimiter present.  If the
+    timestamp contains a forward slash ``/`` we assume day comes
+    first; otherwise we assume the canonical ISO ordering.
+
+    Parameters
+    ----------
+    dt_str : str
+        Date/time string extracted from a log.
+
+    Returns
+    -------
+    datetime or None
+        Parsed datetime or ``None`` if parsing fails.
+    """
+    if pd.isna(dt_str):
+        return None
+    dt_str = dt_str.strip()
+    if not dt_str:
+        return None
+    # Determine the appropriate day/month ordering
+    dayfirst = "/" in dt_str
+    try:
+        return date_parser.parse(dt_str, dayfirst=dayfirst)
+    except (ValueError, TypeError):
+        return None
 
 # Setup logging for production
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -35,7 +76,8 @@ def parse_triple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-        from analysis import parse_datetime
+    # use local parse_datetime
+
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
         location = gd["location"].strip()
@@ -56,7 +98,8 @@ def parse_triple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-        from analysis import parse_datetime
+    # use local parse_datetime
+
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
         return {
@@ -94,7 +137,8 @@ def parse_simple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-        from analysis import parse_datetime
+    # use local parse_datetime
+
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
         location = gd["location"].strip()
@@ -216,7 +260,8 @@ def _fallback_parse_log(log: str) -> Optional[Dict[str, Any]]:
     if not ts_match:
         ts_match = re.search(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", log)
     if ts_match:
-        from analysis import parse_datetime
+    # use local parse_datetime
+
         ts = parse_datetime(ts_match.group(0))
         partial["timestamp"] = ts.isoformat(sep=" ") if ts else ts_match.group(0)
         found_fields.append("timestamp")
@@ -275,6 +320,7 @@ def parse_log(log: str) -> Optional[Dict[str, Any]]:
         Parsed components or None if no pattern matches.
     """
     import pandas as pd
+
     if pd.isna(log) or not isinstance(log, str):
         return None
     log = log.strip()
