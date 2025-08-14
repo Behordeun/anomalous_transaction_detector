@@ -18,6 +18,7 @@ try:
     from parsing_utils import parse_log
 except ImportError:
     import sys
+
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from analysis import (
         embedding_autoencoder_anomaly_detection,

@@ -1,10 +1,11 @@
 import logging
-
 import re
-from typing import Any, Dict, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 import pandas as pd
 from dateutil import parser as date_parser
+
 
 def parse_datetime(dt_str: str) -> Optional[datetime]:
     """Parse a date/time string into a :class:`datetime` object.
@@ -43,6 +44,7 @@ def parse_datetime(dt_str: str) -> Optional[datetime]:
     except (ValueError, TypeError):
         return None
 
+
 # Setup logging for production
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -76,7 +78,7 @@ def parse_triple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-    # use local parse_datetime
+        # use local parse_datetime
 
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
@@ -98,7 +100,7 @@ def parse_triple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-    # use local parse_datetime
+        # use local parse_datetime
 
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
@@ -137,7 +139,7 @@ def parse_simple_colon(log: str) -> Optional[Dict[str, Any]]:
     )
     if m:
         gd = m.groupdict()
-    # use local parse_datetime
+        # use local parse_datetime
 
         ts = parse_datetime(gd["timestamp"])
         iso_ts = ts.isoformat(sep=" ") if ts else gd["timestamp"]
@@ -260,7 +262,7 @@ def _fallback_parse_log(log: str) -> Optional[Dict[str, Any]]:
     if not ts_match:
         ts_match = re.search(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}", log)
     if ts_match:
-    # use local parse_datetime
+        # use local parse_datetime
 
         ts = parse_datetime(ts_match.group(0))
         partial["timestamp"] = ts.isoformat(sep=" ") if ts else ts_match.group(0)

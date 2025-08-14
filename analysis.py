@@ -1,18 +1,16 @@
 import argparse
 import logging
 import os
-from datetime import datetime
 from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from dateutil import parser as date_parser
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from parsing_utils import parse_log, parse_datetime
+from parsing_utils import parse_datetime, parse_log
 
 # Setup logging for production
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -81,8 +79,6 @@ def convert_amount(val) -> Tuple[float, Optional[str]]:
         amount = np.nan
 
     return (amount, currency)
-
-
 
 
 def _add_basic_features(df: pd.DataFrame) -> pd.DataFrame:
