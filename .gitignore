@@ -15,7 +15,7 @@ __pycache__/
 parse_logs.csv
 parsed_logs.csv
 calc_failed_parse_pct.py
-README.md
 *.logs
 *.log
 cli_parse_logs.py
+image
