@@ -1,0 +1,20 @@
+
+
+#Ignore vscode AI rules
+.github/copilot-instructions.md
+.venv
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.qodo
+.idea/
+.DS_Store
+.codacy
+*.html
+parse_logs.csv
+parsed_logs.csv
+calc_failed_parse_pct.py
+README.md
+*.logs
+*.log
