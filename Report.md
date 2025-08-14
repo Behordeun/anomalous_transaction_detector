@@ -12,7 +12,7 @@ The Fraud Detection System is an interactive, end-to-end analytical platform bui
 
 ### 1. Data Ingestion & Parsing
 
-#### System Architecture Diagram
+#### System Architecture Workflow
 
 ```mermaid
 %%{init: { 'theme': 'default' }}%%
