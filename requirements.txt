@@ -1,0 +1,15 @@
+pandas
+numpy
+scikit-learn
+plotly
+python-dateutil
+jupyter
+autopep8
+autoflake
+black
+black[jupyter]
+isort
+kaleido
+streamlit
+watchdog
+openpyxl

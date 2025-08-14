@@ -1,0 +1,15 @@
+
+[theme]
+primaryColor = "#FFD600"           # Bright yellow accent for buttons/sliders
+backgroundColor = "#181818"         # Deep dark background for main area
+secondaryBackgroundColor = "#23272F" # Slightly lighter sidebar
+textColor = "#F5F5F5"               # Soft white text
+font = "sans serif"
+
+[server]
+port = 8501
+headless = true
+enableCORS = true
+
+[browser]
+gatherUsageStats = false
