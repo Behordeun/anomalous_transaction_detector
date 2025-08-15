@@ -197,14 +197,16 @@ streamlit run streamlit_app.py
 
 ```bash
 # Run with different detection methods
-python analysis.py --input data.csv --method isolation_forest
-python analysis.py --input data.csv --method rule_based
-python analysis.py --input data.csv --method sequence_modeling
-python analysis.py --input data.csv --method embedding_autoencoder
+python analysis.py --input [your_data_set] --method isolation_forest
+python analysis.py --input [your_data_set] --method rule_based
+python analysis.py --input [your_data_set] --method sequence_modeling
+python analysis.py --input [your_data_set] --method embedding_autoencoder
 
 # Adjust parameters
-python analysis.py --input data.csv --contamination 0.05 --top_n 50
+python analysis.py --input [your_data_set] --contamination 0.05 --top_n 50 --method [your_preferred_method]
 ```
+
+*NB:* You can use either of `CSV`, `XLSX` or `XLS` files.
 
 ### Docker
 
