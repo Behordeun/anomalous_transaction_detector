@@ -1,13 +1,19 @@
-# Technical Report: Anomalous Transaction Detection System
+# Anomalous Transaction Detection System
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://anomaloustransactiondetector.streamlit.app/)
 
 ## Table of Contents
 
-- [Technical Report: Anomalous Transaction Detection System](#technical-report-anomalous-transaction-detection-system)
+- [Anomalous Transaction Detection System](#anomalous-transaction-detection-system)
   - [Table of Contents](#table-of-contents)
   - [Executive Summary](#executive-summary)
   - [System Architecture](#system-architecture)
     - [Core Components](#core-components)
     - [Data Flow Architecture](#data-flow-architecture)
+  - [Usage](#usage)
+    - [Web Interface](#web-interface)
+    - [Command Line](#command-line)
+    - [Docker](#docker)
   - [Implementation Details](#implementation-details)
     - [1. Data Parsing Module (`parsing_utils.py`)](#1-data-parsing-module-parsing_utilspy)
     - [2. Feature Engineering Engine (`analysis.py`)](#2-feature-engineering-engine-analysispy)
@@ -23,6 +29,7 @@
     - [4. Interpretability Framework](#4-interpretability-framework)
     - [5. Interactive User Interface (`streamlit_app.py`)](#5-interactive-user-interface-streamlit_apppy)
     - [6. Data Export and Reporting](#6-data-export-and-reporting)
+    - [7. Robust Logging System (`errorlogger.py`)](#7-robust-logging-system-errorloggerpy)
   - [Technical Specifications](#technical-specifications)
     - [Dependencies](#dependencies)
     - [Performance Characteristics](#performance-characteristics)
@@ -43,7 +50,7 @@
 
 ## Executive Summary
 
-This technical report documents a production-ready anomaly detection system designed for financial transaction monitoring. The system processes unstructured transaction logs, extracts meaningful features, and identifies suspicious patterns using multiple detection algorithms. The implementation demonstrates enterprise-level software engineering practices with modular architecture, comprehensive error handling, and interactive visualization capabilities.
+This production-ready anomaly detection system monitors financial transactions by processing unstructured logs, extracting meaningful features, and identifying suspicious patterns using four detection algorithms. The system features enterprise-level architecture with robust logging, comprehensive error handling, interactive visualization, and multiple deployment options including a live web interface.
 
 ## System Architecture
 
@@ -54,7 +61,9 @@ The system follows a modular architecture with clear separation of concerns:
 1. **Data Ingestion Layer** (`parsing_utils.py`)
 2. **Feature Engineering & Analysis Engine** (`analysis.py`)
 3. **Interactive User Interface** (`streamlit_app.py`)
-4. **Command-Line Interface** (`cli_parse_logs.py`)
+4. **Robust Logging System** (`errorlogger.py`)
+5. **Cross-Platform Build System** (`Makefile`)
+6. **Container Orchestration** (`docker-compose.yml`, `Dockerfile`)
 
 ### Data Flow Architecture
 
@@ -73,6 +82,46 @@ flowchart TD
       I[synthetic_dirty_transaction_logs.csv/xlsx]
    end
    I --> B
+```
+
+## Usage
+
+### Web Interface
+
+**Live Demo:** [https://anomaloustransactiondetector.streamlit.app/](https://anomaloustransactiondetector.streamlit.app/)
+
+Local deployment:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run Streamlit app
+streamlit run streamlit_app.py
+```
+
+### Command Line
+
+```bash
+# Run with different detection methods
+python analysis.py --input data.csv --method isolation_forest
+python analysis.py --input data.csv --method rule_based
+python analysis.py --input data.csv --method sequence_modeling
+python analysis.py --input data.csv --method embedding_autoencoder
+
+# Adjust parameters
+python analysis.py --input data.csv --contamination 0.05 --top_n 50
+```
+
+### Docker
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Or use Makefile
+make docker-build
+make docker-run
 ```
 
 ## Implementation Details
@@ -212,11 +261,38 @@ The system implements four distinct detection approaches:
 
 ```plain text
 output/
-├── parsed_logs.csv
-├── features_with_scores.csv
-├── top_anomalies.csv
-├── diagnostic_parsing_report.csv
-└── [visualization_files].html
+├── isolation_forest/
+│   ├── parsed_logs.csv
+│   ├── features_with_scores.csv
+│   ├── top_anomalies.csv
+│   ├── diagnostic_parsing_report.csv
+│   └── [visualization_files].html
+├── rule_based/
+├── sequence_modeling/
+└── embedding_autoencoder/
+```
+
+### 7. Robust Logging System (`errorlogger.py`)
+
+**Architecture**: Centralized logging with file-based persistence and clean console output
+
+**Key Features**:
+
+- **Separate Log Files**: `info.log`, `warning.log`, `error.log`
+- **Duplicate Prevention**: Hash-based deduplication
+- **Session Tracking**: Automatic session separators
+- **Context Enrichment**: Additional metadata for debugging
+- **Log Rotation**: Automatic file rotation based on size
+- **Clean Console**: Minimal console output for production use
+
+**Usage**:
+
+```python
+from errorlogger import system_logger
+
+system_logger.info("Process completed successfully")
+system_logger.warning("Partial data recovered", {"records": 150})
+system_logger.error(exception, {"context": "data_processing"}, exc_info=True)
 ```
 
 ## Technical Specifications
@@ -227,6 +303,8 @@ output/
 - **Visualization**: plotly, streamlit
 - **Date Processing**: python-dateutil
 - **File Handling**: openpyxl (Excel support)
+- **Containerization**: Docker, docker-compose
+- **Build System**: Make (cross-platform)
 
 ### Performance Characteristics
 
@@ -238,7 +316,9 @@ output/
 
 - **Parsing Resilience**: Graceful degradation with partial data recovery
 - **Validation**: Input data validation with informative error messages
-- **Logging**: Comprehensive logging for debugging and monitoring
+- **Robust Logging**: Centralized logging system with file persistence
+- **Exception Tracking**: Full traceback capture with context information
+- **Session Management**: Automatic session separation and log rotation
 
 ## Quality Assurance
 
@@ -260,9 +340,11 @@ output/
 ### Production Readiness
 
 - **Configuration Management**: Parameterized thresholds and settings
-- **Monitoring**: Built-in diagnostic reporting and logging
+- **Monitoring**: Built-in diagnostic reporting and robust logging
 - **Scalability**: Designed for batch processing of large datasets
-- **Integration**: Command-line interface for automated workflows
+- **Integration**: Command-line interface and web API for automated workflows
+- **Containerization**: Docker support with multi-stage builds
+- **Cross-Platform**: Windows, Linux, macOS compatibility
 
 ### Security Features
 
@@ -275,9 +357,11 @@ output/
 ### Operational Benefits
 
 - **Automated Detection**: Reduces manual review overhead by 80%+
-- **Multi-Algorithm Approach**: Comprehensive coverage of anomaly types
+- **Multi-Algorithm Approach**: Four detection methods for comprehensive coverage
 - **Interpretable Results**: Clear explanations for each flagged transaction
-- **Real-time Analysis**: Interactive parameter tuning for immediate feedback
+- **Interactive Analysis**: Web interface with real-time parameter tuning
+- **Method-Specific Outputs**: Organized results by detection algorithm
+- **Live Demo Access**: Immediate testing via hosted Streamlit app
 
 ### Risk Management
 
