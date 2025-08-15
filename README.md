@@ -163,22 +163,7 @@ The system follows a modular architecture with clear separation of concerns:
 
 ### Data Flow Architecture
 
-```mermaid
-%%{init: { 'theme': 'default' }}%%
-flowchart TD
-   A[User] -->|Uploads Transaction Logs| B[Streamlit App]
-   B -->|Reads Data| C[parsing_utils.py]
-   C -->|Parses & Cleans Data| D[analysis.py]
-   D -->|Detects Anomalies| E[Output Generation]
-   E -->|Saves Results| F[output/]
-   E -->|Visualizes Results| G[Plots & Reports]
-   F -->|Stores CSV/HTML/PNG| H[Data Consumers]
-   G -->|Displays Visualizations| A
-   subgraph Data Files
-      I[synthetic_dirty_transaction_logs.csv/xlsx]
-   end
-   I --> B
-```
+![Data Flow Architecture](./Data%20Flow%20Architecture.png)
 
 ## Usage
 
