@@ -1,7 +1,7 @@
 # Anomalous Transaction Detection System
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://anomaloustransactiondetector.streamlit.app/)
-[![CI/CD Pipeline](https://github.com/username/anomalous_transaction_detector/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/username/anomalous_transaction_detector/actions)
+[![CI/CD Pipeline](https://github.com/behordeun/anomalous_transaction_detector/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/behordeun/anomalous_transaction_detector/actions)
 [![Code Quality](https://img.shields.io/badge/code%20quality-A-green.svg)](https://github.com/username/anomalous_transaction_detector)
 [![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)](https://github.com/username/anomalous_transaction_detector)
 
@@ -23,6 +23,9 @@
     - [Web Interface](#web-interface)
     - [Command Line](#command-line)
     - [Docker](#docker)
+  - [Development Setup](#development-setup)
+    - [Quick Start](#quick-start)
+    - [Development Commands](#development-commands)
   - [Implementation Details](#implementation-details)
     - [1. Data Parsing Module (`parsing_utils.py`)](#1-data-parsing-module-parsing_utilspy)
     - [2. Feature Engineering Engine (`analysis.py`)](#2-feature-engineering-engine-analysispy)
