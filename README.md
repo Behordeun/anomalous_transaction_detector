@@ -161,6 +161,7 @@ The system follows a modular architecture with clear separation of concerns:
 ### Data Flow Architecture
 
 ```mermaid
+%%{init: { 'theme': 'default' }}%%
 flowchart TD
    A[User] -->|Uploads Transaction Logs| B[Streamlit App]
    B -->|Reads Data| C[parsing_utils.py]
