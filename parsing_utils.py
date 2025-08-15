@@ -1,10 +1,11 @@
-import logging
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pandas as pd
 from dateutil import parser as date_parser
+
+from errorlogger import system_logger
 
 
 def parse_datetime(dt_str: str) -> Optional[datetime]:
@@ -43,10 +44,6 @@ def parse_datetime(dt_str: str) -> Optional[datetime]:
         return date_parser.parse(dt_str, dayfirst=dayfirst)
     except (ValueError, TypeError):
         return None
-
-
-# Setup logging for production
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 ###############################################################################
@@ -299,9 +296,11 @@ def _fallback_parse_log(log: str) -> Optional[Dict[str, Any]]:
         found_fields.append("device")
     if found_fields:
         partial["fields_found"] = found_fields
-        logging.warning(f"Partial parse for log: {str(log)[:50]}... Parsed: {partial}")
+        system_logger.warning(
+            f"Partial parse for log: {str(log)[:50]}...", {"parsed_fields": partial}
+        )
         return partial
-    logging.warning(f"Failed to parse log: {str(log)[:100]}")
+    system_logger.warning(f"Failed to parse log: {str(log)[:100]}")
     return None
 
 

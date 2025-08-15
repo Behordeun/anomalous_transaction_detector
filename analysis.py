@@ -8,7 +8,6 @@ rule-based detection, sequence modeling, and embedding-based approaches.
 
 import argparse
 import csv
-import logging
 import os
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -19,7 +18,10 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from errorlogger import system_logger
 from parsing_utils import parse_datetime, parse_log
+
+system_logger.info("Starting log analysis...")
 
 # Constants
 NO_VALID_LOGS_ERROR = "No valid logs could be parsed. Check input data format."
@@ -39,9 +41,6 @@ TIME_PERCENTILE = 0.95
 RARE_TRANSITION_THRESHOLD = 3
 PCA_PERCENTILE = 98
 RULE_THRESHOLD = 3000
-
-# Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def convert_amount(val: Union[str, int, float]) -> Tuple[float, Optional[str]]:
@@ -94,11 +93,23 @@ def _safe_convert_amount(val: Union[str, int, float]) -> Tuple[float, str]:
     try:
         result = convert_amount(val)
         if isinstance(result, tuple) and len(result) == 2:
-            return result
-        logging.error(f"Invalid convert_amount result for {val}: {result}")
+            amount, currency = result
+            if currency is None:
+                currency = "UNKNOWN"
+            return (amount, currency)
+        system_logger.error(
+            f"Invalid convert_amount result for {val}: {result}",
+            additional_info={
+                "value": str(val),
+                "result": str(result),
+                "type": str(type(result)),
+                "length": len(result) if isinstance(result, tuple) else "N/A",
+            },
+            exc_info=True,
+        )
         return (np.nan, "UNKNOWN")
     except Exception as exc:
-        logging.error(f"Exception in amount conversion for {val}: {exc}")
+        system_logger.error(exc, {"value": str(val)}, exc_info=True)
         return (np.nan, "UNKNOWN")
 
 
@@ -521,12 +532,12 @@ def load_raw_data(input_path: str) -> pd.DataFrame:
         else:
             raise ValueError(f"Unsupported file type: {ext}")
 
-        logging.info(
-            "Loaded raw data from %s with %d rows.", input_path, len(dataframe)
+        system_logger.info(
+            f"Loaded raw data from {input_path} with {len(dataframe)} rows"
         )
         return dataframe
     except Exception as exc:
-        logging.error("Failed to read input file: %s", exc)
+        system_logger.error(exc, {"input_path": input_path}, exc_info=True)
         raise RuntimeError(f"Failed to read input file: {exc}") from exc
 
 
@@ -535,7 +546,9 @@ def _safe_parse_log(log: str) -> Optional[Dict]:
     try:
         return parse_log(log)
     except Exception as exc:
-        logging.warning("Failed to parse log: %s | Error: %s", log, exc)
+        system_logger.warning(
+            f"Failed to parse log: {str(log)[:50]}...", {"error": str(exc)}
+        )
         return None
 
 
@@ -545,10 +558,12 @@ def parse_logs(df_raw: pd.DataFrame) -> pd.DataFrame:
     df_parsed = pd.DataFrame([rec for rec in df_parsed if rec is not None])
 
     if df_parsed.empty:
-        logging.error(NO_VALID_LOGS_ERROR)
+        system_logger.error(
+            NO_VALID_LOGS_ERROR, {"raw_logs": df_raw["raw_log"].tolist()}, exc_info=True
+        )
         raise ValueError(NO_VALID_LOGS_ERROR)
 
-    logging.info("Parsed %d valid logs.", len(df_parsed))
+    system_logger.info(f"Parsed {len(df_parsed)} valid logs")
     return df_parsed
 
 
@@ -556,7 +571,7 @@ def save_parsed_logs(df_parsed: pd.DataFrame, output_dir: str) -> None:
     """Save parsed logs to CSV file."""
     output_path = os.path.join(output_dir, "parsed_logs.csv")
     df_parsed.to_csv(output_path, index=False, header=True)
-    logging.info("Saved parsed logs to %s", output_path)
+    system_logger.info(f"Saved parsed logs to {output_path}")
 
 
 def prepare_model_data(
@@ -569,9 +584,17 @@ def prepare_model_data(
         col for col in categorical_cols + numeric_cols if col not in df_features.columns
     ]
 
-    logging.info("NaN counts before dropna: %s", nan_counts.to_dict())
+    system_logger.info("NaN counts before dropna", {"nan_counts": nan_counts.to_dict()})
     if missing_cols:
-        logging.error("Missing columns before dropna: %s", missing_cols)
+        system_logger.error(
+            f"Missing columns before dropna: {missing_cols}",
+            additional_info={
+                "missing_columns": missing_cols,
+                "n_missing": len(missing_cols),
+                "n_total": len(categorical_cols + numeric_cols),
+            },
+            exc_info=True,
+        )
 
     df_features.dropna(subset=categorical_cols + numeric_cols, inplace=True)
     features, _, _ = prepare_features_for_model(
@@ -592,8 +615,8 @@ def train_and_score(
     threshold = np.percentile(scores, 100 * (1 - contamination))
     df_features["anomaly_label"] = (scores >= threshold).astype(int)
 
-    logging.info(
-        "Model trained. %d anomalies detected.", df_features["anomaly_label"].sum()
+    system_logger.info(
+        f"Model trained. {df_features['anomaly_label'].sum()} anomalies detected"
     )
     return df_features
 
@@ -609,7 +632,7 @@ def save_explained_anomalies(
 
     output_path = os.path.join(output_dir, "top_anomalies.csv")
     explained.to_csv(output_path, index=False, header=True)
-    logging.info("Saved top anomalies to %s", output_path)
+    system_logger.info(f"Saved top anomalies to {output_path}")
 
 
 def save_features_with_scores(
@@ -626,7 +649,7 @@ def save_features_with_scores(
 
     output_path = os.path.join(output_dir, "features_with_scores.csv")
     df_features.to_csv(output_path, index=False, header=True)
-    logging.info("Saved features with scores to %s", output_path)
+    system_logger.info(f"Saved features with scores to {output_path}")
 
 
 def _build_diagnostic_record(
@@ -692,7 +715,9 @@ def _diagnostic_parse_logic(
                 log, {}, "failed", str(exc), 0, f"Exception: {str(exc)}"
             )
         )
-        logging.warning("Failed to parse log: %s | Error: %s", log, exc)
+        system_logger.warning(
+            f"Failed to parse log: {str(log)[:50]}...", {"error": str(exc)}
+        )
         return None
 
 
@@ -728,20 +753,26 @@ def _parse_and_diagnose_logs(
             row_out["parsed"] = str(row_out["parsed"])
             writer.writerow(row_out)
 
-    logging.info("Exported diagnostic parsing report to %s", diag_path)
+    system_logger.info(f"Exported diagnostic parsing report to {diag_path}")
 
     if df_parsed.empty:
-        logging.error(NO_VALID_LOGS_ERROR)
+        system_logger.error(
+            NO_VALID_LOGS_ERROR, {"raw_logs": df_raw["raw_log"].tolist()}, exc_info=True
+        )
         raise ValueError(NO_VALID_LOGS_ERROR)
 
     save_parsed_logs(df_parsed, method_output_dir)
     return df_parsed
 
 
-def _validate_features(df_features: pd.DataFrame) -> None:
+def _validate_features(df_features: pd.DataFrame, df_raw: pd.DataFrame) -> None:
     """Validate feature engineering results."""
     if df_features.empty:
-        logging.error("Feature engineering produced empty DataFrame.")
+        system_logger.error(
+            "Feature engineering produced empty DataFrame",
+            {"raw_logs": df_raw["raw_log"].tolist()},
+            exc_info=True,
+        )
         raise ValueError(
             "Feature engineering produced empty DataFrame. "
             "Check input data format and parsing."
@@ -753,11 +784,18 @@ def _validate_features(df_features: pd.DataFrame) -> None:
         if col not in df_features.columns
     ]
     if missing_cols:
-        logging.error("Missing required columns: %s", missing_cols)
+        system_logger.error(
+            f"Missing required columns: {missing_cols}",
+            additional_info={
+                "n_missing": len(missing_cols),
+                "n_total": len(CATEGORICAL_COLUMNS + NUMERIC_COLUMNS),
+            },
+            exc_info=True,
+        )
         raise ValueError(f"Missing required columns: {missing_cols}")
 
 
-def run_pipeline(
+def isolation_forest_anomaly_detection(
     input_path: str,
     output_dir: str,
     contamination: float = 0.02,
@@ -768,7 +806,7 @@ def run_pipeline(
     method_output_dir = os.path.join(output_dir, method)
     os.makedirs(method_output_dir, exist_ok=True)
 
-    logging.info("Starting pipeline...")
+    system_logger.info("Starting pipeline...")
 
     # Load and parse data
     df_raw = load_raw_data(input_path)
@@ -776,7 +814,7 @@ def run_pipeline(
 
     # Feature engineering
     df_features = engineer_features(df_parsed)
-    _validate_features(df_features)
+    _validate_features(df_features, df_raw)
 
     # Model preparation and training
     features, df_features = prepare_model_data(
@@ -784,7 +822,15 @@ def run_pipeline(
     )
 
     if features.shape[0] == 0:
-        logging.error("Feature matrix is empty after preparation.")
+        system_logger.error(
+            "Feature matrix is empty after preparation",
+            additional_info={
+                "n_features": features.shape[1],
+                "n_samples": features.shape[0],
+                "contamination": contamination,
+            },
+            exc_info=True,
+        )
         raise ValueError("Feature matrix is empty after preparation.")
 
     df_features = train_and_score(df_features, features, contamination)
@@ -796,13 +842,13 @@ def run_pipeline(
     create_visualisations(df_features, output_dir=method_output_dir, method=method)
     save_features_with_scores(df_features, method_output_dir, NUMERIC_COLUMNS)
 
-    logging.info(
-        "Pipeline completed successfully. Outputs saved to %s", method_output_dir
+    system_logger.info(
+        f"Pipeline completed successfully. Outputs saved to {method_output_dir}"
     )
 
 
 def rule_based_anomaly_detection(
-    dataframe: pd.DataFrame, top_n: int = 20
+    dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
     """Rule-based anomaly detection: high amount + new location."""
     dataframe = dataframe.copy()
@@ -839,7 +885,7 @@ def rule_based_anomaly_detection(
 
 
 def sequence_modeling_anomaly_detection(
-    dataframe: pd.DataFrame, top_n: int = 20
+    dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
     """Sequence modeling: flag rare location transitions."""
     dataframe = dataframe.copy()
@@ -883,7 +929,7 @@ def sequence_modeling_anomaly_detection(
 
 
 def embedding_autoencoder_anomaly_detection(
-    dataframe: pd.DataFrame, top_n: int = 20
+    dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
     """Embedding + autoencoder: PCA reconstruction error on text fields."""
     dataframe = dataframe.copy()
@@ -941,6 +987,18 @@ def main() -> None:
         help="Directory to store output artifacts.",
     )
     parser.add_argument(
+        "--method",
+        type=str,
+        choices=[
+            "isolation_forest",
+            "rule_based",
+            "sequence_modeling",
+            "embedding_autoencoder",
+        ],
+        default="isolation_forest",
+        help="Anomaly detection method to use.",
+    )
+    parser.add_argument(
         "--contamination",
         type=float,
         default=0.02,
@@ -954,9 +1012,40 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    run_pipeline(
-        args.input, args.output_dir, contamination=args.contamination, top_n=args.top_n
-    )
+
+    if args.method == "isolation_forest":
+        isolation_forest_anomaly_detection(
+            args.input,
+            args.output_dir,
+            contamination=args.contamination,
+            top_n=args.top_n,
+            method=args.method,
+        )
+    else:
+        # Load and parse data for other methods
+        df_raw = load_raw_data(args.input)
+        df_parsed = parse_logs(df_raw)
+
+        df_results = None
+        if args.method == "rule_based":
+            df_results = rule_based_anomaly_detection(df_parsed, args.top_n)
+        elif args.method == "sequence_modeling":
+            df_results = sequence_modeling_anomaly_detection(df_parsed, args.top_n)
+        elif args.method == "embedding_autoencoder":
+            df_results = embedding_autoencoder_anomaly_detection(df_parsed, args.top_n)
+
+        if df_results is not None:
+            # Save results
+            method_output_dir = os.path.join(args.output_dir, args.method)
+            os.makedirs(method_output_dir, exist_ok=True)
+
+            anomalies = df_results[df_results["anomaly_label"] == 1].head(args.top_n)
+            save_explained_anomalies(anomalies, method_output_dir, NUMERIC_COLUMNS)
+            create_visualisations(df_results, method_output_dir, args.method)
+
+            system_logger.info(
+                f"Analysis completed using {args.method}. Results saved to {method_output_dir}"
+            )
 
 
 if __name__ == "__main__":

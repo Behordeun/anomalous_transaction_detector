@@ -1,4 +1,3 @@
-import logging
 import os
 
 import pandas as pd
@@ -8,13 +7,14 @@ try:
     from analysis import (
         embedding_autoencoder_anomaly_detection,
         engineer_features,
-        explain_anomalies,
         fit_isolation_forest,
+        isolation_forest_anomaly_detection,
         prepare_features_for_model,
         rule_based_anomaly_detection,
         score_anomalies,
         sequence_modeling_anomaly_detection,
     )
+    from errorlogger import system_logger
     from parsing_utils import parse_log
 except ImportError:
     import sys
@@ -23,13 +23,14 @@ except ImportError:
     from analysis import (
         embedding_autoencoder_anomaly_detection,
         engineer_features,
-        explain_anomalies,
         fit_isolation_forest,
+        isolation_forest_anomaly_detection,
         prepare_features_for_model,
         rule_based_anomaly_detection,
         score_anomalies,
         sequence_modeling_anomaly_detection,
     )
+    from errorlogger import system_logger
     from parsing_utils import parse_log
 
 # Custom CSS for professional look
@@ -49,9 +50,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
 
 st.set_page_config(page_title="Fraud Detection Explorer", layout="wide")
 st.markdown(
@@ -63,6 +61,8 @@ DYNAMIC_REPORT_TITLE = "Insights Based on Current Filters"
 MOST_ANOMALOUS_USERS_LABEL = "**Most anomalous users:**"
 MOST_ANOMALOUS_DEVICES_LABEL = "**Most anomalous devices:**"
 MOST_ANOMALOUS_LOCATIONS_LABEL = "**Most anomalous locations:**"
+SEQUENCE_MODELING = "Sequence Modeling"
+EMBEDDING_METHOD = "Embedding + Autoencoder",
 
 
 # Sidebar: Data selection
@@ -74,8 +74,8 @@ method = st.sidebar.selectbox(
     [
         "Rule-based",
         "Isolation Forest (Statistical)",
-        "Sequence Modeling",
-        "Embedding + Autoencoder",
+        SEQUENCE_MODELING,
+        EMBEDDING_METHOD
     ],
     index=1,
     help="Select the anomaly detection method to use.",
@@ -189,56 +189,17 @@ def load_and_parse_data(input_file, example_path):
         df_parsed = parse_and_report(df_raw)
         return df_parsed
     except Exception as e:
-        logging.error(f"Error loading or parsing data: {e}")
+        system_logger.error(
+            e,
+            additional_info={
+                "function": "load_and_parse_data",
+                "input_file": file_info(input_file),
+                "example_path": file_info(example_path),
+            },
+            exc_info=True,
+        )
         st.error(f"Failed to load or parse data: {e}")
         return None
-
-
-def run_pipeline(df_parsed, contamination, top_n):
-    """
-    Run the full fraud detection pipeline on parsed logs.
-    Args:
-        df_parsed: DataFrame of parsed logs.
-        contamination: Expected anomaly rate.
-        top_n: Number of top anomalies to explain.
-    Returns:
-        Tuple of (features DataFrame, explained anomalies DataFrame, categorical columns, numeric columns).
-    """
-    try:
-        categorical_cols = ["currency", "type", "location", "device", "weekday"]
-        numeric_cols = [
-            "amount_value",
-            "hour",
-            "day_of_month",
-            "month",
-            "time_diff_hours",
-            "is_new_device",
-            "is_new_location",
-            "amount_z_user",
-        ]
-        df_features = engineer_features(df_parsed)
-        for col in ["amount_value", "time_diff_hours", "amount_z_user"]:
-            if col in df_features:
-                df_features[col] = df_features[col].round(2)
-        df_features.dropna(subset=categorical_cols + numeric_cols, inplace=True)
-        X, _, _ = prepare_features_for_model(
-            df_features, categorical_cols, numeric_cols
-        )
-        iso = fit_isolation_forest(X, contamination=contamination)
-        scores = score_anomalies(iso, X)
-        df_features["anomaly_score"] = scores.round(2)
-        threshold = pd.Series(scores).quantile(1 - contamination)
-        df_features["anomaly_label"] = (scores >= threshold).astype(int)
-        explained = explain_anomalies(df_features, top_n=top_n)
-        # Visualization handled in separate functions
-        df_features["anomaly_status"] = df_features["anomaly_label"].map(
-            {0: "Normal", 1: "Anomaly"}
-        )
-        return df_features, explained, categorical_cols, numeric_cols
-    except Exception as e:
-        logging.error(f"Pipeline error: {e}")
-        st.error(f"Pipeline failed: {e}")
-        return None, None, None, None
 
 
 def extract_amount(val):
@@ -297,9 +258,9 @@ def run_method_pipeline(df_parsed, method, contamination, top_n):
     try:
         if method == "Rule-based":
             return rule_based_anomaly_detection(df_parsed, top_n)
-        elif method == "Sequence Modeling":
+        elif method == SEQUENCE_MODELING:
             return sequence_modeling_anomaly_detection(df_parsed, top_n)
-        elif method == "Embedding + Autoencoder":
+        elif method == EMBEDDING_METHOD:
             return embedding_autoencoder_anomaly_detection(df_parsed, top_n)
         else:  # Isolation Forest
             categorical_cols = ["currency", "type", "location", "device", "weekday"]
@@ -331,6 +292,21 @@ def run_method_pipeline(df_parsed, method, contamination, top_n):
             )
             return df_features
     except Exception as e:
+        system_logger.error(
+            e,
+            additional_info={
+                "function": "run_method_pipeline",
+                "method": method,
+                "contamination": contamination,
+                "top_n": top_n,
+                "df_parsed": (
+                    df_parsed.shape
+                    if isinstance(df_parsed, pd.DataFrame)
+                    else "Not a DataFrame"
+                ),
+            },
+            exc_info=True,
+        )
         st.error(f"Method pipeline failed: {e}")
         return None
 
@@ -697,13 +673,21 @@ def _detect_anomalies(df_parsed, contamination, top_n, method):
         explained = rule_based_anomaly_detection(df_features, top_n)
         return df_features, explained
     elif method == "Isolation Forest (Statistical)":
-        df_features, explained, _, _ = run_pipeline(df_parsed, contamination, top_n)
+        result = isolation_forest_anomaly_detection(df_parsed, contamination, top_n)
+        if (
+            result is not None
+            and isinstance(result, (list, tuple))
+            and len(result) >= 2
+        ):
+            df_features, explained = result[0], result[1]
+        else:
+            df_features, explained = None, None
         return df_features, explained
-    elif method == "Sequence Modeling":
+    elif method == SEQUENCE_MODELING:
         df_features = df_parsed.copy()
         explained = sequence_modeling_anomaly_detection(df_features, top_n)
         return df_features, explained
-    elif method == "Embedding + Autoencoder":
+    elif method == EMBEDDING_METHOD:
         df_features = df_parsed.copy()
         explained = embedding_autoencoder_anomaly_detection(df_features, top_n)
         return df_features, explained
@@ -712,50 +696,54 @@ def _detect_anomalies(df_parsed, contamination, top_n, method):
         return None, None
 
 
+def _merge_anomaly_info(df_features, explained):
+    """
+    Merge anomaly information from explained DataFrame into df_features.
+    """
+    if len(df_features) != len(explained) and "anomaly_label" in explained.columns:
+        df_features["anomaly_label"] = 0
+        df_features["anomaly_score"] = 0.0
+        df_features["anomaly_status"] = "Normal"
+        if "timestamp" in df_features.columns and "timestamp" in explained.columns:
+            anomaly_indices = df_features["timestamp"].isin(explained["timestamp"])
+            df_features.loc[anomaly_indices, "anomaly_label"] = 1
+            df_features.loc[anomaly_indices, "anomaly_status"] = "Anomaly"
+            if "anomaly_score" in explained.columns:
+                score_map = dict(
+                    zip(explained["timestamp"], explained["anomaly_score"])
+                )
+                df_features.loc[anomaly_indices, "anomaly_score"] = (
+                    df_features.loc[anomaly_indices, "timestamp"]
+                    .map(score_map)
+                    .fillna(0.0)
+                )
+    return df_features
+
 def _show_results(df_features, explained, top_n):
-    if df_features is not None and explained is not None:
-        # For non-Isolation Forest methods, merge anomaly info back to full dataset
-        if len(df_features) != len(explained) and "anomaly_label" in explained.columns:
-            # Create full dataset with default normal labels
-            df_features["anomaly_label"] = 0
-            df_features["anomaly_score"] = 0.0
-            df_features["anomaly_status"] = "Normal"
-
-            # Update with anomaly information where available
-            if "timestamp" in df_features.columns and "timestamp" in explained.columns:
-                anomaly_indices = df_features["timestamp"].isin(explained["timestamp"])
-                df_features.loc[anomaly_indices, "anomaly_label"] = 1
-                df_features.loc[anomaly_indices, "anomaly_status"] = "Anomaly"
-                # Map scores if available
-                if "anomaly_score" in explained.columns:
-                    score_map = dict(
-                        zip(explained["timestamp"], explained["anomaly_score"])
-                    )
-                    df_features.loc[anomaly_indices, "anomaly_score"] = (
-                        df_features.loc[anomaly_indices, "timestamp"]
-                        .map(score_map)
-                        .fillna(0.0)
-                    )
-
-        show_dynamic_report(df_features, explained, top_n)
-        show_visualizations(df_features)
-        show_top_anomalies(explained)
-        st.markdown("<hr>", unsafe_allow_html=True)
-        if isinstance(explained, pd.DataFrame):
-            csv = explained.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="Download Top Anomalies as CSV",
-                data=csv,
-                file_name="top_anomalies.csv",
-                mime="text/csv",
-            )
-        else:
-            st.warning(
-                "Top anomalies could not be exported as CSV because the result is not a DataFrame."
-            )
-    else:
+    if df_features is None or explained is None:
         st.info(
             "Upload a CSV or Excel file with a 'raw_log' column or use the example dataset."
+        )
+        return
+
+    # Merge anomaly info if needed
+    df_features = _merge_anomaly_info(df_features, explained)
+
+    show_dynamic_report(df_features, explained, top_n)
+    show_visualizations(df_features)
+    show_top_anomalies(explained)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    if isinstance(explained, pd.DataFrame):
+        csv = explained.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download Top Anomalies as CSV",
+            data=csv,
+            file_name="top_anomalies.csv",
+            mime="text/csv",
+        )
+    else:
+        st.warning(
+            "Top anomalies could not be exported as CSV because the result is not a DataFrame."
         )
 
 
@@ -771,10 +759,14 @@ def handle_processing(input_file, example_path, contamination, top_n):
     with st.spinner("Processing file and running analysis..."):
         df_parsed = load_and_parse_data(input_file, example_path)
     if df_parsed is not None and not df_parsed.empty:
-        df_features, explained = _detect_anomalies(
-            df_parsed, contamination, top_n, method
-        )
-        _show_results(df_features, explained, top_n)
+        result = _detect_anomalies(df_parsed, contamination, top_n, method)
+        if result is not None:
+            df_features, explained = result
+            _show_results(df_features, explained, top_n)
+        else:
+            st.error(
+                "Anomaly detection failed. Please check your input data and method selection."
+            )
     else:
         st.info(
             "Upload a CSV or Excel file with a 'raw_log' column or use the example dataset."
