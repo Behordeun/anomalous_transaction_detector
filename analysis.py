@@ -1024,7 +1024,10 @@ def main() -> None:
     else:
         # Load and parse data for other methods
         df_raw = load_raw_data(args.input)
-        df_parsed = parse_logs(df_raw)
+        method_output_dir = os.path.join(args.output_dir, args.method)
+        os.makedirs(method_output_dir, exist_ok=True)
+        
+        df_parsed = _parse_and_diagnose_logs(df_raw, method_output_dir)
 
         df_results = None
         if args.method == "rule_based":
@@ -1035,12 +1038,10 @@ def main() -> None:
             df_results = embedding_autoencoder_anomaly_detection(df_parsed, args.top_n)
 
         if df_results is not None:
-            # Save results
-            method_output_dir = os.path.join(args.output_dir, args.method)
-            os.makedirs(method_output_dir, exist_ok=True)
-
+            # Save all required files
             anomalies = df_results[df_results["anomaly_label"] == 1].head(args.top_n)
             save_explained_anomalies(anomalies, method_output_dir, NUMERIC_COLUMNS)
+            save_features_with_scores(df_results, method_output_dir, NUMERIC_COLUMNS)
             create_visualisations(df_results, method_output_dir, args.method)
 
             system_logger.info(

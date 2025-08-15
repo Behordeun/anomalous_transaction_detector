@@ -1,0 +1,6 @@
+timestamp,user,type,amount,location,location_norm,device,fields_found,amount_value,prev_location,anomaly_label,anomaly_score,anomaly_status,explanation
+2025-06-08 20:29:17 ,user1020,cashout,€4828.17,None ,none,None,,4828.17,Birmingham ,1,1,Anomaly,Rare location transition
+2025-07-12 08:21:00 ,user1020,cashout,$4990.94,None ,none,Xiaomi Mi 11,,4990.94,Birmingham ,1,1,Anomaly,Rare location transition
+2025-06-25 18:27:29 ,user1049,deposit,$4782.96,Glasgow ,glasgow,Nokia 3310,,4782.96,London ,1,1,Anomaly,Rare location transition
+2025-06-14 06:54:12 ,user1077,top-up,£3687.15,Glasgow ,glasgow,Samsung Galaxy S10,,3687.15,London ,1,1,Anomaly,Rare location transition
+2025-07-24 22:42:44 ,user1083,top-up,€2433.03,None ,none,Pixel 6,,2433.03,Birmingham ,1,1,Anomaly,Rare location transition

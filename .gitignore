@@ -20,3 +20,4 @@ calc_failed_parse_pct.py
 cli_parse_logs.py
 image
 .vscode
+diagnostic_parsing_report.csv
