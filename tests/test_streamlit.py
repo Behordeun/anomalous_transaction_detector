@@ -1,10 +1,12 @@
-import pytest
+import os
+import tempfile
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import patch, MagicMock
+import pytest
+
 import streamlit_app
-import tempfile
-import os
 
 
 class TestFileOperations:
@@ -12,7 +14,7 @@ class TestFileOperations:
         mock_file = MagicMock()
         mock_file.name = "test.csv"
 
-        with patch('pandas.read_csv') as mock_read_csv:
+        with patch("pandas.read_csv") as mock_read_csv:
             mock_read_csv.return_value = pd.DataFrame({"col1": [1, 2, 3]})
             result = streamlit_app.load_input_file(mock_file)
             assert isinstance(result, pd.DataFrame)
@@ -22,7 +24,7 @@ class TestFileOperations:
         mock_file = MagicMock()
         mock_file.name = "test.xlsx"
 
-        with patch('pandas.read_excel') as mock_read_excel:
+        with patch("pandas.read_excel") as mock_read_excel:
             mock_read_excel.return_value = pd.DataFrame({"col1": [1, 2, 3]})
             result = streamlit_app.load_input_file(mock_file)
             assert isinstance(result, pd.DataFrame)
@@ -97,30 +99,30 @@ class TestUtilityFunctions:
 
 
 class TestDataParsing:
-    @patch('streamlit.write')
+    @patch("streamlit.write")
     def test_parse_and_report_valid_logs(self, mock_write):
-        df_raw = pd.DataFrame({
-            "raw_log": [
-                "2023-01-01 10:00:00:::123:::withdrawal:::$500:::NYC:::mobile",
-                "2023-01-02 11:00:00:::456:::deposit:::€300:::London:::desktop"
-            ]
-        })
+        df_raw = pd.DataFrame(
+            {
+                "raw_log": [
+                    "2023-01-01 10:00:00:::123:::withdrawal:::$500:::NYC:::mobile",
+                    "2023-01-02 11:00:00:::456:::deposit:::€300:::London:::desktop",
+                ]
+            }
+        )
 
         result = streamlit_app.parse_and_report(df_raw)
         assert len(result) == 2
         assert "user" in result.columns
 
-    @patch('streamlit.write')
+    @patch("streamlit.write")
     def test_parse_and_report_invalid_logs(self, mock_write):
-        df_raw = pd.DataFrame({
-            "raw_log": ["invalid log", "another invalid"]
-        })
+        df_raw = pd.DataFrame({"raw_log": ["invalid log", "another invalid"]})
 
         result = streamlit_app.parse_and_report(df_raw)
         assert len(result) == 0
 
-    @patch('streamlit_app.load_input_file')
-    @patch('streamlit_app.parse_and_report')
+    @patch("streamlit_app.load_input_file")
+    @patch("streamlit_app.parse_and_report")
     def test_load_and_parse_data_success(self, mock_parse, mock_load):
         mock_load.return_value = pd.DataFrame({"raw_log": ["test"]})
         mock_parse.return_value = pd.DataFrame({"user": ["user1"]})
@@ -129,8 +131,8 @@ class TestDataParsing:
         assert result is not None
         assert len(result) == 1
 
-    @patch('streamlit_app.load_input_file')
-    @patch('streamlit.error')
+    @patch("streamlit_app.load_input_file")
+    @patch("streamlit.error")
     def test_load_and_parse_data_failure(self, mock_error, mock_load):
         mock_load.side_effect = Exception("File not found")
 
@@ -140,48 +142,58 @@ class TestDataParsing:
 
 
 class TestMethodPipeline:
-    @patch('streamlit_app.rule_based_anomaly_detection')
+    @patch("streamlit_app.rule_based_anomaly_detection")
     def test_run_method_pipeline_rule_based(self, mock_rule_based):
         mock_df = pd.DataFrame({"user": ["user1"], "amount": ["$100"]})
-        mock_rule_based.return_value = pd.DataFrame({
-            "anomaly_label": [0],
-            "anomaly_score": [0.1],
-            "anomaly_status": ["Normal"]
-        })
+        mock_rule_based.return_value = pd.DataFrame(
+            {"anomaly_label": [0], "anomaly_score": [0.1], "anomaly_status": ["Normal"]}
+        )
 
         result = streamlit_app.run_method_pipeline(mock_df, "Rule-based", 0.02, 20)
         assert result is not None
         mock_rule_based.assert_called_once()
 
-    @patch('streamlit_app.sequence_modeling_anomaly_detection')
+    @patch("streamlit_app.sequence_modeling_anomaly_detection")
     def test_run_method_pipeline_sequence(self, mock_sequence):
         mock_df = pd.DataFrame({"user": ["user1"], "amount": ["$100"]})
-        mock_sequence.return_value = pd.DataFrame({
-            "anomaly_label": [0],
-            "anomaly_score": [0.1],
-            "anomaly_status": ["Normal"]
-        })
+        mock_sequence.return_value = pd.DataFrame(
+            {"anomaly_label": [0], "anomaly_score": [0.1], "anomaly_status": ["Normal"]}
+        )
 
-        result = streamlit_app.run_method_pipeline(mock_df, "Sequence Modeling", 0.02, 20)
+        result = streamlit_app.run_method_pipeline(
+            mock_df, "Sequence Modeling", 0.02, 20
+        )
         assert result is not None
         mock_sequence.assert_called_once()
 
-    @patch('streamlit_app.engineer_features')
-    @patch('streamlit_app.prepare_features_for_model')
-    @patch('streamlit_app.fit_isolation_forest')
-    @patch('streamlit_app.score_anomalies')
-    @patch('pandas.Series.quantile')
-    def test_run_method_pipeline_isolation_forest(self, mock_quantile, mock_score, mock_fit, mock_prepare, mock_engineer):
+    @patch("streamlit_app.engineer_features")
+    @patch("streamlit_app.prepare_features_for_model")
+    @patch("streamlit_app.fit_isolation_forest")
+    @patch("streamlit_app.score_anomalies")
+    @patch("pandas.Series.quantile")
+    def test_run_method_pipeline_isolation_forest(
+        self, mock_quantile, mock_score, mock_fit, mock_prepare, mock_engineer
+    ):
         mock_df = pd.DataFrame({"user": ["user1"], "amount": ["$100"]})
 
         # Mock the complete pipeline
-        engineered_df = pd.DataFrame({
-            "currency": ["USD"], "type": ["purchase"], "location": ["NYC"],
-            "device": ["mobile"], "weekday": [1], "amount_value": [100.0],
-            "hour": [10], "day_of_month": [1], "month": [1],
-            "time_diff_hours": [1.0], "is_new_device": [0],
-            "is_new_location": [0], "amount_z_user": [0.5]
-        })
+        engineered_df = pd.DataFrame(
+            {
+                "currency": ["USD"],
+                "type": ["purchase"],
+                "location": ["NYC"],
+                "device": ["mobile"],
+                "weekday": [1],
+                "amount_value": [100.0],
+                "hour": [10],
+                "day_of_month": [1],
+                "month": [1],
+                "time_diff_hours": [1.0],
+                "is_new_device": [0],
+                "is_new_location": [0],
+                "amount_z_user": [0.5],
+            }
+        )
         mock_engineer.return_value = engineered_df
 
         mock_prepare.return_value = (np.array([[1, 2, 3]]), None, None)
@@ -189,16 +201,21 @@ class TestMethodPipeline:
         mock_score.return_value = np.array([0.5])
         mock_quantile.return_value = 0.4
 
-        result = streamlit_app.run_method_pipeline(mock_df, "Isolation Forest (Statistical)", 0.02, 20)
+        result = streamlit_app.run_method_pipeline(
+            mock_df, "Isolation Forest (Statistical)", 0.02, 20
+        )
         assert result is not None
         assert "anomaly_score" in result.columns
         assert "anomaly_label" in result.columns
 
-    @patch('streamlit.error')
+    @patch("streamlit.error")
     def test_run_method_pipeline_exception_handling(self, mock_error):
         mock_df = pd.DataFrame({"user": ["user1"], "amount": ["$100"]})
 
-        with patch('streamlit_app.rule_based_anomaly_detection', side_effect=Exception("Test error")):
+        with patch(
+            "streamlit_app.rule_based_anomaly_detection",
+            side_effect=Exception("Test error"),
+        ):
             result = streamlit_app.run_method_pipeline(mock_df, "Rule-based", 0.02, 20)
 
         assert result is None
@@ -207,20 +224,23 @@ class TestMethodPipeline:
 
 class TestAnomalyDetection:
     def test_detect_anomalies_rule_based(self):
-        mock_df = pd.DataFrame({
-            "user": ["user1", "user2"],
-            "amount": ["$100", "$200"],
-            "location": ["NYC", "LA"],
-            "timestamp": ["2023-01-01 10:00:00", "2023-01-02 11:00:00"]
-        })
+        mock_df = pd.DataFrame(
+            {
+                "user": ["user1", "user2"],
+                "amount": ["$100", "$200"],
+                "location": ["NYC", "LA"],
+                "timestamp": ["2023-01-01 10:00:00", "2023-01-02 11:00:00"],
+            }
+        )
 
-        with patch('streamlit_app.rule_based_anomaly_detection') as mock_rule:
-            mock_rule.return_value = pd.DataFrame({
-                "anomaly_label": [0, 1],
-                "anomaly_score": [0.1, 0.8]
-            })
+        with patch("streamlit_app.rule_based_anomaly_detection") as mock_rule:
+            mock_rule.return_value = pd.DataFrame(
+                {"anomaly_label": [0, 1], "anomaly_score": [0.1, 0.8]}
+            )
 
-            df_features, explained = streamlit_app._detect_anomalies(mock_df, 0.02, 20, "Rule-based")
+            df_features, explained = streamlit_app._detect_anomalies(
+                mock_df, 0.02, 20, "Rule-based"
+            )
 
             assert df_features is not None
             assert explained is not None
@@ -229,23 +249,22 @@ class TestAnomalyDetection:
     def test_detect_anomalies_unknown_method(self):
         mock_df = pd.DataFrame({"user": ["user1"]})
 
-        with patch('streamlit.error') as mock_error:
-            result = streamlit_app._detect_anomalies(mock_df, 0.02, 20, "Unknown Method")
+        with patch("streamlit.error") as mock_error:
+            result = streamlit_app._detect_anomalies(
+                mock_df, 0.02, 20, "Unknown Method"
+            )
 
             assert result == (None, None)
             mock_error.assert_called_once()
 
     def test_merge_anomaly_info(self):
-        df_features = pd.DataFrame({
-            "timestamp": ["2023-01-01", "2023-01-02"],
-            "user": ["user1", "user2"]
-        })
+        df_features = pd.DataFrame(
+            {"timestamp": ["2023-01-01", "2023-01-02"], "user": ["user1", "user2"]}
+        )
 
-        explained = pd.DataFrame({
-            "timestamp": ["2023-01-01"],
-            "anomaly_score": [0.8],
-            "anomaly_label": [1]
-        })
+        explained = pd.DataFrame(
+            {"timestamp": ["2023-01-01"], "anomaly_score": [0.8], "anomaly_label": [1]}
+        )
 
         result = streamlit_app._merge_anomaly_info(df_features, explained)
 
@@ -256,7 +275,7 @@ class TestAnomalyDetection:
 
 
 class TestVisualizationHelpers:
-    @patch('streamlit.markdown')
+    @patch("streamlit.markdown")
     def test_render_list(self, mock_markdown):
         items = {"item1": 5, "item2": 3}
         streamlit_app.render_list("Test Label", items)
@@ -264,103 +283,108 @@ class TestVisualizationHelpers:
         # Should call markdown multiple times
         assert mock_markdown.call_count >= 3
 
-    @patch('streamlit.plotly_chart')
+    @patch("streamlit.plotly_chart")
     def test_show_time_series_anomalies(self, mock_chart):
-        df = pd.DataFrame({
-            "dt": pd.to_datetime(["2023-01-01", "2023-01-02"]),
-            "anomaly_label": [0, 1]
-        })
+        df = pd.DataFrame(
+            {
+                "dt": pd.to_datetime(["2023-01-01", "2023-01-02"]),
+                "anomaly_label": [0, 1],
+            }
+        )
 
         streamlit_app.show_time_series_anomalies(df)
         mock_chart.assert_called_once()
 
-    @patch('streamlit.plotly_chart')
+    @patch("streamlit.plotly_chart")
     def test_show_device_usage_patterns(self, mock_chart):
-        df = pd.DataFrame({
-            "device": ["mobile", "web"],
-            "anomaly_label": [0, 1]
-        })
+        df = pd.DataFrame({"device": ["mobile", "web"], "anomaly_label": [0, 1]})
 
         streamlit_app.show_device_usage_patterns(df)
         mock_chart.assert_called_once()
 
-    @patch('streamlit.plotly_chart')
+    @patch("streamlit.plotly_chart")
     def test_show_location_heatmap(self, mock_chart):
-        df = pd.DataFrame({
-            "location": ["NYC", "LA"],
-            "anomaly_label": [0, 1],
-            "user": ["user1", "user2"],
-            "timestamp": ["2023-01-01", "2023-01-02"]
-        })
+        df = pd.DataFrame(
+            {
+                "location": ["NYC", "LA"],
+                "anomaly_label": [0, 1],
+                "user": ["user1", "user2"],
+                "timestamp": ["2023-01-01", "2023-01-02"],
+            }
+        )
 
         streamlit_app.show_location_heatmap(df)
         mock_chart.assert_called_once()
 
-    @patch('streamlit.plotly_chart')
+    @patch("streamlit.plotly_chart")
     def test_show_amount_boxplot(self, mock_chart):
-        df = pd.DataFrame({
-            "amount_value": [100, 200],
-            "type": ["purchase", "withdrawal"],
-            "anomaly_label": [0, 1]
-        })
+        df = pd.DataFrame(
+            {
+                "amount_value": [100, 200],
+                "type": ["purchase", "withdrawal"],
+                "anomaly_label": [0, 1],
+            }
+        )
 
         streamlit_app.show_amount_boxplot(df)
         mock_chart.assert_called_once()
 
 
 class TestBusinessIntelligence:
-    @patch('streamlit.markdown')
+    @patch("streamlit.markdown")
     def test_show_dynamic_report(self, mock_markdown):
-        df_features = pd.DataFrame({
-            "anomaly_label": [0, 1, 0],
-            "user": ["user1", "user2", "user3"]
-        })
+        df_features = pd.DataFrame(
+            {"anomaly_label": [0, 1, 0], "user": ["user1", "user2", "user3"]}
+        )
 
-        explained = pd.DataFrame({
-            "user": ["user2"],
-            "device": ["mobile"],
-            "location": ["NYC"],
-            "anomaly_score": [0.8]
-        })
+        explained = pd.DataFrame(
+            {
+                "user": ["user2"],
+                "device": ["mobile"],
+                "location": ["NYC"],
+                "anomaly_score": [0.8],
+            }
+        )
 
         streamlit_app.show_dynamic_report(df_features, explained, 10)
 
         # Should call markdown multiple times for the report
         assert mock_markdown.call_count > 0
 
-    @patch('streamlit.dataframe')
+    @patch("streamlit.dataframe")
     def test_show_top_anomalies(self, mock_dataframe):
-        explained = pd.DataFrame({
-            "timestamp": ["2023-01-01"],
-            "user": ["user1"],
-            "type": ["purchase"],
-            "amount": ["$100"],
-            "location": ["NYC"],
-            "device": ["mobile"],
-            "anomaly_score": [0.8],
-            "explanation": ["Test explanation"]
-        })
+        explained = pd.DataFrame(
+            {
+                "timestamp": ["2023-01-01"],
+                "user": ["user1"],
+                "type": ["purchase"],
+                "amount": ["$100"],
+                "location": ["NYC"],
+                "device": ["mobile"],
+                "anomaly_score": [0.8],
+                "explanation": ["Test explanation"],
+            }
+        )
 
         streamlit_app.show_top_anomalies(explained)
         mock_dataframe.assert_called_once()
 
 
 class TestIntegration:
-    @patch('streamlit_app.show_dynamic_report')
-    @patch('streamlit_app.show_visualizations')
-    @patch('streamlit_app.show_top_anomalies')
-    @patch('streamlit.download_button')
-    def test_show_results_complete_flow(self, mock_download, mock_top, mock_viz, mock_report):
-        df_features = pd.DataFrame({
-            "anomaly_label": [0, 1],
-            "timestamp": ["2023-01-01", "2023-01-02"]
-        })
+    @patch("streamlit_app.show_dynamic_report")
+    @patch("streamlit_app.show_visualizations")
+    @patch("streamlit_app.show_top_anomalies")
+    @patch("streamlit.download_button")
+    def test_show_results_complete_flow(
+        self, mock_download, mock_top, mock_viz, mock_report
+    ):
+        df_features = pd.DataFrame(
+            {"anomaly_label": [0, 1], "timestamp": ["2023-01-01", "2023-01-02"]}
+        )
 
-        explained = pd.DataFrame({
-            "timestamp": ["2023-01-02"],
-            "anomaly_score": [0.8],
-            "anomaly_label": [1]
-        })
+        explained = pd.DataFrame(
+            {"timestamp": ["2023-01-02"], "anomaly_score": [0.8], "anomaly_label": [1]}
+        )
 
         streamlit_app._show_results(df_features, explained, 10)
 
@@ -369,23 +393,25 @@ class TestIntegration:
         mock_top.assert_called_once()
         mock_download.assert_called_once()
 
-    @patch('streamlit.info')
+    @patch("streamlit.info")
     def test_show_results_none_inputs(self, mock_info):
         streamlit_app._show_results(None, None, 10)
         mock_info.assert_called_once()
 
-    @patch('streamlit_app.load_and_parse_data')
-    @patch('streamlit_app._detect_anomalies')
-    @patch('streamlit_app._show_results')
-    @patch('streamlit.spinner')
-    def test_handle_processing_success(self, mock_spinner, mock_show, mock_detect, mock_load):
+    @patch("streamlit_app.load_and_parse_data")
+    @patch("streamlit_app._detect_anomalies")
+    @patch("streamlit_app._show_results")
+    @patch("streamlit.spinner")
+    def test_handle_processing_success(
+        self, mock_spinner, mock_show, mock_detect, mock_load
+    ):
         mock_spinner.return_value.__enter__ = MagicMock()
         mock_spinner.return_value.__exit__ = MagicMock()
 
         mock_load.return_value = pd.DataFrame({"user": ["user1"]})
         mock_detect.return_value = (
             pd.DataFrame({"anomaly_label": [1]}),
-            pd.DataFrame({"anomaly_score": [0.8]})
+            pd.DataFrame({"anomaly_score": [0.8]}),
         )
 
         streamlit_app.handle_processing("test.csv", "example.csv", 0.02, 20)
@@ -394,8 +420,8 @@ class TestIntegration:
         mock_detect.assert_called_once()
         mock_show.assert_called_once()
 
-    @patch('streamlit_app.load_and_parse_data')
-    @patch('streamlit.info')
+    @patch("streamlit_app.load_and_parse_data")
+    @patch("streamlit.info")
     def test_handle_processing_no_data(self, mock_info, mock_load):
         mock_load.return_value = None
 

@@ -96,8 +96,7 @@ install: ## Install project dependencies using uv
 
 install-dev: ## Install development dependencies
 	@echo "$(BLUE)Installing development dependencies...$(NC)"
-	@$(UV) pip install -r requirements.txt
-	@$(UV) pip install pytest pytest-cov pytest-xvfb black flake8 mypy bandit safety
+	@$(UV) pip install -r requirements-dev.txt
 	@echo "$(GREEN)Development dependencies installed$(NC)"
 
 ## Data Analysis Commands

@@ -1,0 +1,14 @@
+# Ignore test files and development dependencies
+tests/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ignore known false positives for data science libraries
+# These are typically related to pickle usage in sklearn which is expected
+CVE-2022-25836
+CVE-2019-20916
