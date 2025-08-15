@@ -372,7 +372,7 @@ if st.button("Run Analysis"):
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 create_visualisations(
-                    df_results, temp_dir, method.lower().replace(" ", "_")
+                    df_results, temp_dir, str(method).lower().replace(" ", "_")
                 )
 
                 # Display key visualizations
