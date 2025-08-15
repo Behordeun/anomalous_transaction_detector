@@ -19,3 +19,4 @@ calc_failed_parse_pct.py
 *.log
 cli_parse_logs.py
 image
+.vscode
