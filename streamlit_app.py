@@ -62,7 +62,7 @@ MOST_ANOMALOUS_USERS_LABEL = "**Most anomalous users:**"
 MOST_ANOMALOUS_DEVICES_LABEL = "**Most anomalous devices:**"
 MOST_ANOMALOUS_LOCATIONS_LABEL = "**Most anomalous locations:**"
 SEQUENCE_MODELING = "Sequence Modeling"
-EMBEDDING_METHOD = "Embedding + Autoencoder",
+EMBEDDING_METHOD = ("Embedding + Autoencoder",)
 
 
 # Sidebar: Data selection
@@ -75,7 +75,7 @@ method = st.sidebar.selectbox(
         "Rule-based",
         "Isolation Forest (Statistical)",
         SEQUENCE_MODELING,
-        EMBEDDING_METHOD
+        EMBEDDING_METHOD,
     ],
     index=1,
     help="Select the anomaly detection method to use.",
@@ -718,6 +718,7 @@ def _merge_anomaly_info(df_features, explained):
                     .fillna(0.0)
                 )
     return df_features
+
 
 def _show_results(df_features, explained, top_n):
     if df_features is None or explained is None:

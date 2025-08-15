@@ -1026,7 +1026,7 @@ def main() -> None:
         df_raw = load_raw_data(args.input)
         method_output_dir = os.path.join(args.output_dir, args.method)
         os.makedirs(method_output_dir, exist_ok=True)
-        
+
         df_parsed = _parse_and_diagnose_logs(df_raw, method_output_dir)
 
         df_results = None
