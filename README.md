@@ -7,6 +7,12 @@
 - [Anomalous Transaction Detection System](#anomalous-transaction-detection-system)
   - [Table of Contents](#table-of-contents)
   - [Executive Summary](#executive-summary)
+  - [Anomaly Detection Methods](#anomaly-detection-methods)
+    - [1. Isolation Forest (Statistical) - **Recommended Default**](#1-isolation-forest-statistical---recommended-default)
+    - [2. Rule-Based Detection](#2-rule-based-detection)
+    - [3. Sequence Modeling](#3-sequence-modeling)
+    - [4. Embedding + Autoencoder (PCA)](#4-embedding--autoencoder-pca)
+    - [Method Selection Guide](#method-selection-guide)
   - [System Architecture](#system-architecture)
     - [Core Components](#core-components)
     - [Data Flow Architecture](#data-flow-architecture)
@@ -51,6 +57,85 @@
 ## Executive Summary
 
 This production-ready anomaly detection system monitors financial transactions by processing unstructured logs, extracting meaningful features, and identifying suspicious patterns using four detection algorithms. The system features enterprise-level architecture with robust logging, comprehensive error handling, interactive visualization, and multiple deployment options including a live web interface.
+
+## Anomaly Detection Methods
+
+The system implements four complementary detection algorithms, each designed to catch different types of anomalous behavior:
+
+### 1. Isolation Forest (Statistical) - **Recommended Default**
+
+**Best for:** General-purpose anomaly detection with high accuracy
+
+**How it works:** Uses ensemble learning to isolate anomalies by randomly selecting features and split values. Anomalous points require fewer splits to isolate.
+
+**Key Parameters:**
+- `contamination` (0.01-0.10): Expected proportion of anomalies (default: 0.02 = 2%)
+- Higher contamination = more anomalies detected
+- Lower contamination = stricter detection
+
+**When to use:** 
+- Unknown anomaly patterns
+- Need explainable results
+- Balanced dataset
+- Production environments
+
+### 2. Rule-Based Detection
+
+**Best for:** Known fraud patterns and compliance requirements
+
+**How it works:** Flags transactions that combine high amounts (>$3000) with new location usage
+
+**Key Parameters:**
+- `RULE_THRESHOLD`: Amount threshold (default: $3000)
+- No contamination parameter needed
+
+**When to use:**
+- Clear business rules exist
+- Regulatory compliance
+- High-value transaction monitoring
+- Interpretable results required
+
+### 3. Sequence Modeling
+
+**Best for:** Detecting unusual user behavior patterns
+
+**How it works:** Analyzes location transition patterns and flags rare user movements (≤3 occurrences)
+
+**Key Parameters:**
+- `RARE_TRANSITION_THRESHOLD`: Minimum occurrences to be considered normal (default: 3)
+- Focuses on user journey anomalies
+
+**When to use:**
+- Geographic fraud detection
+- Travel pattern analysis
+- Account takeover detection
+- Behavioral anomalies
+
+### 4. Embedding + Autoencoder (PCA)
+
+**Best for:** Complex pattern recognition in categorical data
+
+**How it works:** Uses PCA reconstruction error on transaction type, location, and device combinations
+
+**Key Parameters:**
+- `PCA_PERCENTILE`: Threshold percentile for anomalies (default: 98th percentile)
+- `n_components`: PCA dimensions (default: min(10, features))
+
+**When to use:**
+- Complex categorical patterns
+- Device fingerprinting
+- Subtle anomaly detection
+- Research and experimentation
+
+### Method Selection Guide
+
+| Scenario | Recommended Method | Reason |
+|----------|-------------------|--------|
+| **Production deployment** | Isolation Forest | Best balance of accuracy and interpretability |
+| **Compliance/Audit** | Rule-Based | Clear, explainable business logic |
+| **Geographic fraud** | Sequence Modeling | Specializes in location patterns |
+| **Research/Experimentation** | All methods | Compare results across approaches |
+| **High-value transactions** | Rule-Based + Isolation Forest | Combine explicit rules with ML |
 
 ## System Architecture
 
@@ -260,16 +345,25 @@ The system implements four distinct detection approaches:
 **File Structure**:
 
 ```plain text
-output/
-├── isolation_forest/
-│   ├── parsed_logs.csv
-│   ├── features_with_scores.csv
-│   ├── top_anomalies.csv
-│   ├── diagnostic_parsing_report.csv
-│   └── [visualization_files].html
-├── rule_based/
-├── sequence_modeling/
-└── embedding_autoencoder/
+.
+├── analysis.py
+├── data
+│   ├── synthetic_dirty_transaction_logs.csv
+│   └── synthetic_dirty_transaction_logs.xlsx
+├── docker-compose.yml
+├── Dockerfile
+├── errorlogger.py
+├── fraud_tools_team_ds_test.docx
+├── Makefile
+├── output
+│   ├── embedding_autoencoder/
+│   ├── isolation_forest/
+│   ├── rule_based/
+│   └── sequence_modeling/
+├── parsing_utils.py
+├── README.md
+├── requirements.txt
+└── streamlit_app.py
 ```
 
 ### 7. Robust Logging System (`errorlogger.py`)
