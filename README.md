@@ -140,13 +140,13 @@ The system implements four complementary detection algorithms, each designed to 
 
 ### Method Selection Guide
 
-| Scenario | Recommended Method | Reason |
-|----------|-------------------|--------|
-| **Production deployment** | Isolation Forest | Best balance of accuracy and interpretability |
-| **Compliance/Audit** | Rule-Based | Clear, explainable business logic |
-| **Geographic fraud** | Sequence Modeling | Specializes in location patterns |
-| **Research/Experimentation** | All methods | Compare results across approaches |
-| **High-value transactions** | Rule-Based + Isolation Forest | Combine explicit rules with ML |
+| Scenario                           | Recommended Method            | Reason                                        |
+| ---------------------------------- | ----------------------------- | --------------------------------------------- |
+| **Production deployment**    | Isolation Forest              | Best balance of accuracy and interpretability |
+| **Compliance/Audit**         | Rule-Based                    | Clear, explainable business logic             |
+| **Geographic fraud**         | Sequence Modeling             | Specializes in location patterns              |
+| **Research/Experimentation** | All methods                   | Compare results across approaches             |
+| **High-value transactions**  | Rule-Based + Isolation Forest | Combine explicit rules with ML                |
 
 ## System Architecture
 
@@ -396,7 +396,7 @@ The system implements four distinct detection approaches:
 
 **File Structure**:
 
-```plain text
+```plain
 .
 ├── .github/
 │   └── workflows/
@@ -459,18 +459,21 @@ system_logger.error(exception, {"context": "data_processing"}, exc_info=True)
 ### Dependencies
 
 **Production Dependencies** (`requirements.txt`):
+
 - **Core Processing**: pandas>=2.0.0, numpy>=1.24.0, scikit-learn>=1.3.0
 - **Visualization**: plotly>=5.15.0, streamlit>=1.25.0
 - **Date Processing**: python-dateutil>=2.8.0
 - **File Handling**: openpyxl>=3.1.0 (Excel support)
 
 **Development Dependencies** (`requirements-dev.txt`):
+
 - **Testing**: pytest>=7.4.0, pytest-cov>=4.1.0
 - **Code Quality**: black>=23.0.0, flake8>=6.0.0, isort>=5.12.0
 - **Security**: bandit>=1.7.0, safety>=2.3.0
 - **Type Checking**: mypy>=1.5.0
 
 **Infrastructure**:
+
 - **Containerization**: Docker, docker-compose
 - **Build System**: Make (cross-platform)
 - **CI/CD**: GitHub Actions
