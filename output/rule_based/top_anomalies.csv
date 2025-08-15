@@ -1,31 +1,11 @@
 timestamp,user,type,amount,location,location_norm,device,fields_found,amount_value,prev_location,is_new_location,anomaly_label,anomaly_score,anomaly_status,explanation
-2025-06-02 19:52:44 ,user1000,refund,$3610.68,Cardiff ,cardiff,Huawei P30,,3610.68,,1,1,3610.68,Anomaly,High amount + new location
-2025-06-03 10:11:53,user1000,cashout,£4659.06,Birmingham,birmingham,Nokia 3310,,4659.06,Cardiff ,1,1,4659.06,Anomaly,High amount + new location
-2025-06-03 21:23:30 ,user1000,cashout,£4063.97,Liverpool ,liverpool,None,,4063.97,Birmingham,1,1,4063.97,Anomaly,High amount + new location
-2025-06-05 03:01:00,user1000,cashout,3032.41,Leeds,leeds,Pixel 6,,3032.41,Birmingham ,1,1,3032.41,Anomaly,High amount + new location
-2025-06-11 01:58:58 ,user1000,deposit,£3443.9,Liverpool ,liverpool,Pixel 6,,3443.9,None,1,1,3443.9,Anomaly,High amount + new location
-2025-06-11 17:23:13,user1000,purchase,3451.51,Birmingham,birmingham,Xiaomi Mi 11,,3451.51,Liverpool ,1,1,3451.51,Anomaly,High amount + new location
-2025-06-14 21:24:18 ,user1000,cashout,€3121.69,Birmingham ,birmingham,Huawei P30,,3121.69,Glasgow,1,1,3121.69,Anomaly,High amount + new location
-2025-06-18 07:31:05,user1000,deposit,€4537.72,Cardiff,cardiff,None,,4537.72,Birmingham ,1,1,4537.72,Anomaly,High amount + new location
-2025-06-21 11:15:04 ,user1000,top-up,€4737.85,Liverpool ,liverpool,None,,4737.85,Birmingham,1,1,4737.85,Anomaly,High amount + new location
-2025-06-22 12:54:09,user1000,top-up,3363.8,Leeds,leeds,None,,3363.8,,1,1,3363.8,Anomaly,High amount + new location
-2025-06-22 16:54:22,user1000,transfer,3273.93,Leeds,leeds,Nokia 3310,,3273.93,Birmingham,1,1,3273.93,Anomaly,High amount + new location
-2025-06-25 19:49:08,user1000,debit,3413.7,Manchester,manchester,Pixel 6,,3413.7,Leeds,1,1,3413.7,Anomaly,High amount + new location
-2025-06-28 20:38:14,user1000,refund,£3213.02,Glasgow,glasgow,Samsung Galaxy S10,,3213.02,,1,1,3213.02,Anomaly,High amount + new location
-2025-06-29 14:29:07,user1000,purchase,4222.78,London,london,Huawei P30,,4222.78,Glasgow,1,1,4222.78,Anomaly,High amount + new location
-2025-06-29 22:12:13 ,user1000,withdrawal,$4335.33,Liverpool ,liverpool,Huawei P30,,4335.33,London,1,1,4335.33,Anomaly,High amount + new location
-2025-06-30 04:17:02,user1000,deposit,4169.62,Manchester,manchester,Pixel 6,,4169.62,Liverpool ,1,1,4169.62,Anomaly,High amount + new location
-2025-07-01 04:10:24 ,user1000,transfer,€4844.96,Leeds ,leeds,Huawei P30,,4844.96,Manchester,1,1,4844.96,Anomaly,High amount + new location
-2025-07-03 12:13:18,user1000,cashout,€4282.02,Birmingham,birmingham,None,,4282.02,Liverpool,1,1,4282.02,Anomaly,High amount + new location
-2025-07-04 22:11:46 ,user1000,debit,£4102.31,Liverpool ,liverpool,Nokia 3310,,4102.31,Leeds,1,1,4102.31,Anomaly,High amount + new location
-2025-07-08 04:12:26,user1000,cashout,€3078.95,Birmingham,birmingham,Samsung Galaxy S10,,3078.95,,1,1,3078.95,Anomaly,High amount + new location
-2025-07-12 06:18:49 ,user1000,withdrawal,€3783.21,Manchester ,manchester,None,,3783.21,None ,1,1,3783.21,Anomaly,High amount + new location
-2025-07-12 15:22:08 ,user1000,withdrawal,£4686.05,Manchester ,manchester,None,,4686.05,Leeds ,1,1,4686.05,Anomaly,High amount + new location
-2025-07-21 00:13:34 ,user1000,deposit,$4859.83,Birmingham ,birmingham,Nokia 3310,,4859.83,Leeds,1,1,4859.83,Anomaly,High amount + new location
-2025-07-25 02:33:24 ,user1000,withdrawal,£4510.63,Cardiff ,cardiff,iPhone 13,,4510.63,None,1,1,4510.63,Anomaly,High amount + new location
-2025-06-01 15:05:41,user1001,cashout,4517.8,Cardiff,cardiff,None,,4517.8,,1,1,4517.8,Anomaly,High amount + new location
-2025-06-12 19:45:18,user1001,transfer,4214.67,Cardiff,cardiff,Xiaomi Mi 11,,4214.67,,1,1,4214.67,Anomaly,High amount + new location
-2025-06-19 11:42:25 ,user1001,cashout,€3473.24,Manchester ,manchester,Nokia 3310,,3473.24,London,1,1,3473.24,Anomaly,High amount + new location
-2025-06-23 13:46:33,user1001,withdrawal,3532.78,Leeds,leeds,iPhone 13,,3532.78,Manchester ,1,1,3532.78,Anomaly,High amount + new location
-2025-06-28 04:45:27,user1001,cashout,4660.82,Glasgow,glasgow,Samsung Galaxy S10,,4660.82,Manchester ,1,1,4660.82,Anomaly,High amount + new location
-2025-06-30 08:43:40,user1001,cashout,£3135.26,Birmingham,birmingham,Samsung Galaxy S10,,3135.26,Birmingham ,1,1,3135.26,Anomaly,High amount + new location
+2025-06-12 15:55:41,user1083,purchase,4998.25,Leeds,leeds,Pixel 6,,4998.25,Cardiff,1,1,4998.25,Anomaly,High amount + new location
+2025-06-29 13:29:47,user1064,top-up,£4997.33,Cardiff,cardiff,Pixel 6,,4997.33,None,1,1,4997.33,Anomaly,High amount + new location
+2025-07-13 07:00:39,user1068,refund,€4997.29,Birmingham,birmingham,Pixel 6,,4997.29,Manchester,1,1,4997.29,Anomaly,High amount + new location
+2025-06-10 12:09:08,user1046,top-up,$4996.45,Liverpool,liverpool,iPhone 13,,4996.45,Leeds,1,1,4996.45,Anomaly,High amount + new location
+2025-07-13 06:33:41,user1082,top-up,£4994.68,Glasgow,glasgow,None,,4994.68,Leeds,1,1,4994.68,Anomaly,High amount + new location
+2025-06-08 18:46:31 ,user1020,deposit,€4994.5,Birmingham ,birmingham,Huawei P30,,4994.5,Liverpool,1,1,4994.5,Anomaly,High amount + new location
+2025-07-05 01:09:24 ,user1092,deposit,$4994.05,Glasgow ,glasgow,Nokia 3310,,4994.05,Glasgow,1,1,4994.05,Anomaly,High amount + new location
+2025-07-13 23:32:38,user1064,deposit,$4993.36,Manchester,manchester,Samsung Galaxy S10,,4993.36,Leeds,1,1,4993.36,Anomaly,High amount + new location
+2025-07-08 23:10:18 ,user1014,purchase,$4993.34,Glasgow ,glasgow,Huawei P30,,4993.34,,1,1,4993.34,Anomaly,High amount + new location
+2025-07-23 03:31:39 ,user1020,deposit,£4992.22,Leeds ,leeds,None,,4992.22,Liverpool ,1,1,4992.22,Anomaly,High amount + new location

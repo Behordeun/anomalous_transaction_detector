@@ -1,31 +1,6 @@
 timestamp,user,type,amount,location,location_norm,device,fields_found,amount_value,anomaly_score,anomaly_label,anomaly_status,explanation
-2025-07-21 17:14:37 ,user1028,withdrawal,$1034.97,Leeds ,leeds,Nokia 3310,,1034.97,1.1721834778356925,1,Anomaly,Unusual text pattern detected
-2025-06-29 08:08:04 ,user1003,purchase,$4083.7,London ,london,Xiaomi Mi 11,,4083.7,1.1543299619602345,1,Anomaly,Unusual text pattern detected
-2025-06-15 05:35:56 ,user1048,top-up,£1179.65,Birmingham ,birmingham,Samsung Galaxy S10,,1179.65,1.1535257241455237,1,Anomaly,Unusual text pattern detected
-2025-06-18 19:07:42 ,user1033,debit,$3543.99,None ,none,Nokia 3310,,3543.99,1.187242222259007,1,Anomaly,Unusual text pattern detected
-2025-07-02 12:31:48 ,user1081,top-up,$3369.36,Cardiff ,cardiff,Nokia 3310,,3369.36,1.1785888009646701,1,Anomaly,Unusual text pattern detected
-2025-07-10 04:24:55 ,user1025,withdrawal,€2232.76,London ,london,Samsung Galaxy S10,,2232.76,1.2201182778450415,1,Anomaly,Unusual text pattern detected
-2025-07-23 12:23:48 ,user1011,top-up,€597.89,London ,london,Samsung Galaxy S10,,597.89,1.168802010406433,1,Anomaly,Unusual text pattern detected
-2025-07-19 04:55:40 ,user1097,withdrawal,£2970.03,Manchester ,manchester,Pixel 6,,2970.03,1.1821037101803857,1,Anomaly,Unusual text pattern detected
-2025-07-02 09:22:35 ,user1018,deposit,€1984.53,London ,london,Pixel 6,,1984.53,1.171219815578342,1,Anomaly,Unusual text pattern detected
-2025-07-28 23:02:09 ,user1080,transfer,$3236.65,London ,london,Samsung Galaxy S10,,3236.65,1.1855625501169138,1,Anomaly,Unusual text pattern detected
-2025-07-29 08:14:22 ,user1041,top-up,€3059.79,Leeds ,leeds,Nokia 3310,,3059.79,1.1676821582356165,1,Anomaly,Unusual text pattern detected
-2025-07-19 00:49:59 ,user1051,top-up,$1299.59,Cardiff ,cardiff,Huawei P30,,1299.59,1.1789475113156354,1,Anomaly,Unusual text pattern detected
-2025-07-18 22:48:18 ,user1031,refund,€4595.64,Liverpool ,liverpool,iPhone 13,,4595.64,1.1557581035653,1,Anomaly,Unusual text pattern detected
-2025-06-24 15:09:06 ,user1012,withdrawal,$591.92,Manchester ,manchester,Pixel 6,,591.92,1.1821037101803857,1,Anomaly,Unusual text pattern detected
-2025-06-21 07:25:58 ,user1011,deposit,$4323.1,Birmingham ,birmingham,Pixel 6,,4323.1,1.1605605831519485,1,Anomaly,Unusual text pattern detected
-2025-07-26 14:43:40 ,user1005,refund,$1326.51,Leeds ,leeds,Nokia 3310,,1326.51,1.2391923589579856,1,Anomaly,Unusual text pattern detected
-2025-07-22 20:04:55 ,user1033,top-up,£4107.01,London ,london,Nokia 3310,,4107.01,1.1832696999446064,1,Anomaly,Unusual text pattern detected
-2025-06-11 09:20:50 ,user1029,top-up,€4397.46,Leeds ,leeds,Nokia 3310,,4397.46,1.1676821582356165,1,Anomaly,Unusual text pattern detected
-2025-06-29 18:51:54 ,user1059,top-up,£2952.1,Birmingham ,birmingham,Samsung Galaxy S10,,2952.1,1.1535257241455237,1,Anomaly,Unusual text pattern detected
-2025-07-22 11:13:45 ,user1082,withdrawal,£2773.9,Cardiff ,cardiff,Xiaomi Mi 11,,2773.9,1.1959631093925815,1,Anomaly,Unusual text pattern detected
-2025-06-01 13:36:33 ,user1093,withdrawal,€4463.55,Glasgow ,glasgow,Xiaomi Mi 11,,4463.55,1.1808451273494749,1,Anomaly,Unusual text pattern detected
-2025-06-12 02:27:03 ,user1070,purchase,€2517.6,London ,london,Samsung Galaxy S10,,2517.6,1.194032869628867,1,Anomaly,Unusual text pattern detected
-2025-06-30 03:36:16 ,user1076,purchase,€3439.96,London ,london,Samsung Galaxy S10,,3439.96,1.194032869628867,1,Anomaly,Unusual text pattern detected
-2025-07-03 01:03:28 ,user1025,purchase,£2668.25,London ,london,Samsung Galaxy S10,,2668.25,1.194032869628867,1,Anomaly,Unusual text pattern detected
-2025-06-22 03:39:47 ,user1094,withdrawal,£661.76,Cardiff ,cardiff,Samsung Galaxy S10,,661.76,1.2092189942159688,1,Anomaly,Unusual text pattern detected
-2025-07-03 19:20:27 ,user1091,refund,$513.73,Liverpool ,liverpool,iPhone 13,,513.73,1.1557581035653,1,Anomaly,Unusual text pattern detected
-2025-07-30 13:17:31 ,user1058,top-up,€4664.48,Manchester ,manchester,Nokia 3310,,4664.48,1.264093491138315,1,Anomaly,Unusual text pattern detected
-2025-06-27 00:39:44 ,user1055,deposit,$376.65,London ,london,Samsung Galaxy S10,,376.65,1.2380340680282278,1,Anomaly,Unusual text pattern detected
-2025-07-01 13:42:26 ,user1031,withdrawal,£132.74,Leeds ,leeds,Pixel 6,,132.74,1.1810586524402156,1,Anomaly,Unusual text pattern detected
-2025-07-14 05:35:26 ,user1031,top-up,£3786.74,London ,london,Nokia 3310,,3786.74,1.1832696999446064,1,Anomaly,Unusual text pattern detected
+2025-07-25 17:32:28 ,user1008,transfer,$3407.01,London ,london,iPhone 13,,3407.01,1.2897672746141187,1,Anomaly,Unusual text pattern detected
+2025-07-28 02:12:36 ,user1057,transfer,$701.96,London ,london,iPhone 13,,701.96,1.2897672746141187,1,Anomaly,Unusual text pattern detected
+2025-07-21 20:07:46 ,user1084,transfer,$3571.71,London ,london,iPhone 13,,3571.71,1.2897672746141187,1,Anomaly,Unusual text pattern detected
+2025-06-24 21:23:22 ,user1048,transfer,$3790.95,London ,london,iPhone 13,,3790.95,1.2897672746141187,1,Anomaly,Unusual text pattern detected
+2025-06-30 20:55:39 ,user1005,transfer,£4977.03,London ,london,iPhone 13,,4977.03,1.2897672746141187,1,Anomaly,Unusual text pattern detected

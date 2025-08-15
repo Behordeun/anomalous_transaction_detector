@@ -39,7 +39,11 @@ DATA_DIR := data
 OUTPUT_DIR := output
 INPUT_FILE := $(DATA_DIR)$(PATH_SEP)synthetic_dirty_transaction_logs.csv
 STREAMLIT_PORT := 8501
-PYTHON_EXE := $(VENV_BIN)$(PATH_SEP)python
+ifeq ($(DETECTED_OS),Windows)
+    PYTHON_EXE := $(VENV_BIN)$(PATH_SEP)python.exe
+else
+    PYTHON_EXE := python3
+endif
 DOCKER_IMAGE := anomaly-detector
 DOCKER_TAG := latest
 
@@ -93,7 +97,7 @@ install: ## Install project dependencies using uv
 install-dev: ## Install development dependencies
 	@echo "$(BLUE)Installing development dependencies...$(NC)"
 	@$(UV) pip install -r requirements.txt
-	@$(UV) pip install pytest black flake8 mypy bandit safety
+	@$(UV) pip install pytest pytest-cov pytest-xvfb black flake8 mypy bandit safety
 	@echo "$(GREEN)Development dependencies installed$(NC)"
 
 ## Data Analysis Commands
@@ -132,9 +136,35 @@ streamlit-dev: ## Launch Streamlit in development mode with auto-reload
 	@$(PYTHON_EXE) -m streamlit run streamlit_app.py --server.port $(STREAMLIT_PORT) --server.runOnSave true
 
 ## Quality Assurance
-test: ## Run tests
-	@echo "$(BLUE)Running tests...$(NC)"
-	@$(PYTHON_EXE) -m pytest tests/ -v || echo "$(YELLOW)No tests found. Consider adding tests in tests/ directory$(NC)"
+test: ## Run tests with coverage
+	@echo "$(BLUE)Running tests with coverage...$(NC)"
+	@$(MKDIR) coverage
+	@$(PYTHON_EXE) -m pytest tests/ -v || $(PYTHON_EXE) -m pytest tests/ --cov=. --cov-report=html:coverage/html --cov-report=xml:coverage/coverage.xml --cov-report=term-missing -v 2>/dev/null || $(PYTHON_EXE) -m pytest tests/ -v
+	@echo "$(GREEN)Tests completed$(NC)"
+
+test-unit: ## Run unit tests only
+	@echo "$(BLUE)Running unit tests...$(NC)"
+	@$(MKDIR) coverage
+	@$(PYTHON_EXE) -m pytest tests/ -m "not integration" -v || $(PYTHON_EXE) -m pytest tests/ -m "not integration" --cov=. --cov-report=html:coverage/html --cov-report=xml:coverage/coverage.xml -v 2>/dev/null || $(PYTHON_EXE) -m pytest tests/ -v
+
+test-integration: ## Run integration tests only
+	@echo "$(BLUE)Running integration tests...$(NC)"
+	@$(MKDIR) coverage
+	@$(PYTHON_EXE) -m pytest tests/ -m integration -v || $(PYTHON_EXE) -m pytest tests/ -m integration --cov=. --cov-report=html:coverage/html --cov-report=xml:coverage/coverage.xml -v 2>/dev/null || $(PYTHON_EXE) -m pytest tests/ -v
+
+test-watch: ## Run tests in watch mode
+	@echo "$(BLUE)Running tests in watch mode...$(NC)"
+	@$(PYTHON_EXE) -m pytest tests/ -f || $(PYTHON_EXE) -m pytest tests/ --cov=. -f 2>/dev/null || $(PYTHON_EXE) -m pytest tests/ -v
+
+coverage-report: ## Open coverage report in browser
+	@echo "$(BLUE)Opening coverage report...$(NC)"
+ifeq ($(DETECTED_OS),Windows)
+	@start coverage\html\index.html
+else ifeq ($(DETECTED_OS),macOS)
+	@open coverage/html/index.html
+else
+	@xdg-open coverage/html/index.html
+endif
 
 lint: ## Run code linting
 	@echo "$(BLUE)Running linting...$(NC)"
@@ -255,8 +285,8 @@ compose-build: ## Build docker-compose images
 ## Cleanup
 clean: ## Clean up generated files and cache
 	@echo "$(BLUE)Cleaning up...$(NC)"
-	@$(RM) $(OUTPUT_DIR) 2>nul || true
-	@$(RM) __pycache__ .pytest_cache .mypy_cache 2>nul || true
+	@$(RM) coverage 2>nul || true
+	@$(RM) __pycache__ .pytest_cache .mypy_cache .coverage htmlcov 2>nul || true
 	@$(RM_FILE) *.pyc security_report.json 2>nul || true
 	@echo "$(GREEN)Cleanup completed$(NC)"
 
@@ -282,6 +312,7 @@ dev-setup: setup install-dev ## Complete development setup
 	@echo "  4. Run 'make docker-build-all' to build Docker images"
 
 check: lint test security ## Run all quality checks
+	@echo "$(GREEN)All quality checks completed$(NC)"
 
 ## Information
 info: ## Show project information

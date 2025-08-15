@@ -22,3 +22,7 @@ image
 .vscode
 diagnostic_parsing_report.csv
 logs
+*.coverage
+coverage
+.coverage.*
+nul

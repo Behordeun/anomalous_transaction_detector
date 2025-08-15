@@ -1039,8 +1039,8 @@ def main() -> None:
 
         if df_results is not None:
             # Save all required files
-            anomalies = df_results[df_results["anomaly_label"] == 1].head(args.top_n)
-            save_explained_anomalies(anomalies, method_output_dir, NUMERIC_COLUMNS)
+            top_anomalies = df_results[df_results["anomaly_label"] == 1].sort_values("anomaly_score", ascending=False).head(args.top_n)
+            save_explained_anomalies(top_anomalies, method_output_dir, NUMERIC_COLUMNS)
             save_features_with_scores(df_results, method_output_dir, NUMERIC_COLUMNS)
             create_visualisations(df_results, method_output_dir, args.method)
 
