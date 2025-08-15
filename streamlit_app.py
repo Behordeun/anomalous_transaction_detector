@@ -254,7 +254,18 @@ def get_risk_badge(percent_anomalies):
 
 
 def run_method_pipeline(df_parsed, method, contamination, top_n):
-    """Run anomaly detection pipeline for specific method."""
+    """
+    Execute the complete anomaly detection pipeline for the specified method.
+
+    Args:
+        df_parsed: DataFrame of parsed transaction logs.
+        method: Anomaly detection method to use.
+        contamination: Expected proportion of anomalies (for statistical methods).
+        top_n: Number of top anomalies to return.
+
+    Returns:
+        DataFrame with anomaly detection results or None if error occurs.
+    """
     try:
         if method == "Rule-based":
             return rule_based_anomaly_detection(df_parsed, top_n)
@@ -466,6 +477,13 @@ def show_dynamic_report(df_features, explained, top_n):
 
 
 def show_time_series_anomalies(df_features, key=None):
+    """
+    Display time series visualization of anomaly frequency over time.
+
+    Args:
+        df_features: DataFrame with datetime and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     if "dt" in df_features and "anomaly_label" in df_features:
@@ -490,6 +508,13 @@ def show_time_series_anomalies(df_features, key=None):
 
 
 def show_device_usage_patterns(df_features, key=None):
+    """
+    Display bar chart showing device usage patterns for normal vs anomalous transactions.
+
+    Args:
+        df_features: DataFrame with device and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     if "device" in df_features and "anomaly_label" in df_features:
@@ -513,6 +538,13 @@ def show_device_usage_patterns(df_features, key=None):
 
 
 def show_location_heatmap(df_features, key=None):
+    """
+    Display bar chart showing transaction frequency by location.
+
+    Args:
+        df_features: DataFrame with location and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     location_col = (
@@ -542,6 +574,13 @@ def show_location_heatmap(df_features, key=None):
 
 
 def show_geospatial_anomaly_map(df_features, key=None):
+    """
+    Display geospatial map of anomalies if latitude/longitude data is available.
+
+    Args:
+        df_features: DataFrame with geographic coordinates and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     if "latitude" in df_features and "longitude" in df_features:
@@ -567,6 +606,13 @@ def show_geospatial_anomaly_map(df_features, key=None):
 
 
 def show_user_anomaly_frequency(df_features, key=None):
+    """
+    Display bar chart showing transaction frequency by user.
+
+    Args:
+        df_features: DataFrame with user and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     if "user" in df_features and "anomaly_label" in df_features:
@@ -590,6 +636,13 @@ def show_user_anomaly_frequency(df_features, key=None):
 
 
 def show_amount_boxplot(df_features, key=None):
+    """
+    Display box plot showing transaction amount distribution by type.
+
+    Args:
+        df_features: DataFrame with amount, type, and anomaly information.
+        key: Unique key for Streamlit component (optional).
+    """
     import plotly.express as px
 
     if "amount_value" in df_features and "type" in df_features:
@@ -609,9 +662,10 @@ def show_amount_boxplot(df_features, key=None):
 
 def show_visualizations(df_features):
     """
-    Display a set of diagnostic and business visualizations in Streamlit.
+    Display a comprehensive set of diagnostic and business visualizations.
+
     Args:
-        df_features: DataFrame of features and anomaly labels.
+        df_features: DataFrame containing transaction features and anomaly labels.
     """
     st.markdown(
         "<h2 style='margin-top:2em;'>Visualizations</h2>", unsafe_allow_html=True
@@ -667,7 +721,18 @@ def display_file_info(input_file, use_example, example_path):
 
 
 def _detect_anomalies(df_parsed, contamination, top_n, method):
+    """
+    Detect anomalies using the specified method.
 
+    Args:
+        df_parsed: DataFrame of parsed transaction logs.
+        contamination: Expected proportion of anomalies (for statistical methods).
+        top_n: Number of top anomalies to return.
+        method: Anomaly detection method to use.
+
+    Returns:
+        Tuple of (df_features, explained) or (None, None) if method unknown.
+    """
     if method == "Rule-based":
         df_features = df_parsed.copy()
         explained = rule_based_anomaly_detection(df_features, top_n)
@@ -699,6 +764,13 @@ def _detect_anomalies(df_parsed, contamination, top_n, method):
 def _merge_anomaly_info(df_features, explained):
     """
     Merge anomaly information from explained DataFrame into df_features.
+
+    Args:
+        df_features: DataFrame with transaction features.
+        explained: DataFrame with anomaly explanations and scores.
+
+    Returns:
+        DataFrame with merged anomaly information.
     """
     if len(df_features) != len(explained) and "anomaly_label" in explained.columns:
         df_features["anomaly_label"] = 0
@@ -721,6 +793,14 @@ def _merge_anomaly_info(df_features, explained):
 
 
 def _show_results(df_features, explained, top_n):
+    """
+    Display analysis results including reports, visualizations, and download options.
+
+    Args:
+        df_features: DataFrame with transaction features and anomaly labels.
+        explained: DataFrame with explained anomalies.
+        top_n: Number of top anomalies to display.
+    """
     if df_features is None or explained is None:
         st.info(
             "Upload a CSV or Excel file with a 'raw_log' column or use the example dataset."

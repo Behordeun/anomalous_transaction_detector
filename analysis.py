@@ -728,6 +728,15 @@ def _parse_and_diagnose_logs(
     parsing_diagnostics = []
 
     def diagnostic_safe_parse(log):
+        """
+        Safely parse a log entry with diagnostic tracking.
+
+        Args:
+            log: Raw log string to parse.
+
+        Returns:
+            Parsed log dictionary or None if parsing fails.
+        """
         return _diagnostic_parse_logic(log, parsing_diagnostics)
 
     df_parsed = df_raw["raw_log"].apply(diagnostic_safe_parse)

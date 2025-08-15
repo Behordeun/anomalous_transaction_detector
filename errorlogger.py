@@ -20,6 +20,14 @@ class Logger:
         preserve_logs: bool = True,
         debug_mode: bool = False,
     ) -> None:
+        """
+        Initialize the Logger with specified configuration.
+
+        Args:
+            log_dir: Directory to store log files (default: "logs").
+            preserve_logs: Whether to preserve existing logs (default: True).
+            debug_mode: Whether to enable debug output (default: False).
+        """
         self.log_dir = Path(log_dir)
         self.preserve_logs = preserve_logs
         self.debug_mode = debug_mode  # Control debug output
