@@ -68,6 +68,7 @@ MOST_ANOMALOUS_LOCATIONS_LABEL = "**Most anomalous locations:**"
 # Sidebar: Data selection
 
 st.sidebar.header("Analysis Controls")
+st.sidebar.markdown("Select an **anomaly detection method** below:")
 method = st.sidebar.selectbox(
     "Anomaly Detection Method",
     [
@@ -79,6 +80,7 @@ method = st.sidebar.selectbox(
     index=1,
     help="Select the anomaly detection method to use.",
 )
+st.sidebar.markdown("Select the parameters for anomaly detection:")
 contamination = st.sidebar.slider(
     "Anomaly contamination rate", 0.01, 0.10, 0.02, 0.01, key="contamination_slider"
 )
@@ -282,12 +284,144 @@ def get_risk_badge(percent_anomalies):
     Returns:
         Tuple of (risk level string, badge class string).
     """
-    if percent_anomalies > 2:
-        return "High", "badge-high"
-    elif percent_anomalies > 1:
-        return "Medium", "badge-medium"
+    if percent_anomalies > 5:
+        return "High Risk", "badge-high"
+    elif percent_anomalies > 2:
+        return "Medium Risk", "badge-medium"
     else:
-        return "Low", "badge-low"
+        return "Low Risk", "badge-low"
+
+
+def run_method_pipeline(df_parsed, method, contamination, top_n):
+    """Run anomaly detection pipeline for specific method."""
+    try:
+        if method == "Rule-based":
+            return rule_based_anomaly_detection(df_parsed, top_n)
+        elif method == "Sequence Modeling":
+            return sequence_modeling_anomaly_detection(df_parsed, top_n)
+        elif method == "Embedding + Autoencoder":
+            return embedding_autoencoder_anomaly_detection(df_parsed, top_n)
+        else:  # Isolation Forest
+            categorical_cols = ["currency", "type", "location", "device", "weekday"]
+            numeric_cols = [
+                "amount_value",
+                "hour",
+                "day_of_month",
+                "month",
+                "time_diff_hours",
+                "is_new_device",
+                "is_new_location",
+                "amount_z_user",
+            ]
+            df_features = engineer_features(df_parsed)
+            for col in ["amount_value", "time_diff_hours", "amount_z_user"]:
+                if col in df_features:
+                    df_features[col] = df_features[col].round(2)
+            df_features.dropna(subset=categorical_cols + numeric_cols, inplace=True)
+            X, _, _ = prepare_features_for_model(
+                df_features, categorical_cols, numeric_cols
+            )
+            iso = fit_isolation_forest(X, contamination=contamination)
+            scores = score_anomalies(iso, X)
+            df_features["anomaly_score"] = scores.round(2)
+            threshold = pd.Series(scores).quantile(1 - contamination)
+            df_features["anomaly_label"] = (scores >= threshold).astype(int)
+            df_features["anomaly_status"] = df_features["anomaly_label"].map(
+                {0: "Normal", 1: "Anomaly"}
+            )
+            return df_features
+    except Exception as e:
+        st.error(f"Method pipeline failed: {e}")
+        return None
+
+
+# Main execution
+if st.button("Run Analysis"):
+    df_parsed = load_and_parse_data(
+        input_file if input_file else example_path, example_path
+    )
+    if df_parsed is not None and not df_parsed.empty:
+        with st.spinner(f"Running {method} analysis..."):
+            df_results = run_method_pipeline(df_parsed, method, contamination, top_n)
+
+        if df_results is not None:
+            # Display results
+            anomaly_count = df_results["anomaly_label"].sum()
+            total_count = len(df_results)
+            percent_anomalies = (anomaly_count / total_count) * 100
+
+            st.header(f"Analysis Results - {method}")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Transactions", total_count)
+            with col2:
+                st.metric("Anomalies Detected", anomaly_count)
+            with col3:
+                risk_level, badge_class = get_risk_badge(percent_anomalies)
+                st.metric("Anomaly Rate", f"{percent_anomalies:.2f}%")
+                st.markdown(
+                    f'<span class="impact-badge {badge_class}">{risk_level}</span>',
+                    unsafe_allow_html=True,
+                )
+
+            # Show top anomalies
+            if anomaly_count > 0:
+                st.subheader("Top Anomalies")
+                anomalies = (
+                    df_results[df_results["anomaly_label"] == 1]
+                    .sort_values("anomaly_score", ascending=False)
+                    .head(top_n)
+                )
+                display_cols = [
+                    "user",
+                    "amount",
+                    "type",
+                    "location",
+                    "device",
+                    "anomaly_score",
+                ]
+                if "explanation" in anomalies.columns:
+                    display_cols.append("explanation")
+                available_cols = [
+                    col for col in display_cols if col in anomalies.columns
+                ]
+                st.dataframe(anomalies[available_cols], use_container_width=True)
+
+            # Import and use visualization functions
+            import tempfile
+
+            import streamlit.components.v1 as components
+
+            from analysis import create_visualisations
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                create_visualisations(
+                    df_results, temp_dir, method.lower().replace(" ", "_")
+                )
+
+                # Display key visualizations
+                st.subheader("Visualizations")
+
+                # Amount vs Score Scatter
+                scatter_path = os.path.join(temp_dir, "amount_vs_score_scatter.html")
+                if os.path.exists(scatter_path):
+                    with open(scatter_path, "r") as f:
+                        components.html(f.read(), height=500)
+
+                # Box plots and grouped charts
+                viz_files = [
+                    ("amount_by_type_boxplot.html", "Amount Distribution by Type"),
+                    ("anomaly_by_type_grouped.html", "Anomaly Counts by Type"),
+                    ("device_usage_grouped.html", "Device Usage Patterns"),
+                    ("temporal_scatter.html", "Temporal Analysis"),
+                ]
+
+                for filename, title in viz_files:
+                    filepath = os.path.join(temp_dir, filename)
+                    if os.path.exists(filepath):
+                        st.subheader(title)
+                        with open(filepath, "r") as f:
+                            components.html(f.read(), height=500)
 
 
 def render_list(label, items):
@@ -645,24 +779,3 @@ def handle_processing(input_file, example_path, contamination, top_n):
         st.info(
             "Upload a CSV or Excel file with a 'raw_log' column or use the example dataset."
         )
-
-
-def main():
-    """
-    Main entry point for the Streamlit fraud detection app.
-    Handles sidebar controls, file upload, preloading, and pipeline execution.
-    """
-    display_file_info(input_file, use_example, example_path)
-    process_clicked = False
-    if input_file or use_example:
-        process_clicked = st.button(
-            "Process", help="Run end-to-end analysis of the uploaded file"
-        )
-    if process_clicked:
-        handle_processing(input_file, example_path, contamination, top_n)
-    else:
-        st.info("Upload a CSV or Excel file and click 'Process' to run analysis.")
-
-
-if __name__ == "__main__":
-    main()
