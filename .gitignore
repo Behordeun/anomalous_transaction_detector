@@ -21,3 +21,4 @@ cli_parse_logs.py
 image
 .vscode
 diagnostic_parsing_report.csv
+logs

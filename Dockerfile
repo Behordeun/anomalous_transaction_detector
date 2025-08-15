@@ -24,11 +24,10 @@ FROM base AS development
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install dependencies with uv
-RUN uv pip install --system -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install development dependencies
-RUN uv pip install --system bandit black flake8 mypy pytest safety
+RUN pip install --no-cache-dir bandit black flake8 mypy pytest safety
 
 # Copy source code
 COPY *.py ./
@@ -49,9 +48,8 @@ FROM base AS production
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-# Copy requirements and install production dependencies only
 COPY requirements.txt .
-RUN uv pip install --system -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY *.py ./
