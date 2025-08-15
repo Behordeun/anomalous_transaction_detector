@@ -69,11 +69,13 @@ The system implements four complementary detection algorithms, each designed to 
 **How it works:** Uses ensemble learning to isolate anomalies by randomly selecting features and split values. Anomalous points require fewer splits to isolate.
 
 **Key Parameters:**
+
 - `contamination` (0.01-0.10): Expected proportion of anomalies (default: 0.02 = 2%)
 - Higher contamination = more anomalies detected
 - Lower contamination = stricter detection
 
-**When to use:** 
+**When to use:**
+
 - Unknown anomaly patterns
 - Need explainable results
 - Balanced dataset
@@ -86,10 +88,12 @@ The system implements four complementary detection algorithms, each designed to 
 **How it works:** Flags transactions that combine high amounts (>$3000) with new location usage
 
 **Key Parameters:**
+
 - `RULE_THRESHOLD`: Amount threshold (default: $3000)
 - No contamination parameter needed
 
 **When to use:**
+
 - Clear business rules exist
 - Regulatory compliance
 - High-value transaction monitoring
@@ -102,10 +106,12 @@ The system implements four complementary detection algorithms, each designed to 
 **How it works:** Analyzes location transition patterns and flags rare user movements (≤3 occurrences)
 
 **Key Parameters:**
+
 - `RARE_TRANSITION_THRESHOLD`: Minimum occurrences to be considered normal (default: 3)
 - Focuses on user journey anomalies
 
 **When to use:**
+
 - Geographic fraud detection
 - Travel pattern analysis
 - Account takeover detection
@@ -118,10 +124,12 @@ The system implements four complementary detection algorithms, each designed to 
 **How it works:** Uses PCA reconstruction error on transaction type, location, and device combinations
 
 **Key Parameters:**
+
 - `PCA_PERCENTILE`: Threshold percentile for anomalies (default: 98th percentile)
 - `n_components`: PCA dimensions (default: min(10, features))
 
 **When to use:**
+
 - Complex categorical patterns
 - Device fingerprinting
 - Subtle anomaly detection
@@ -153,7 +161,6 @@ The system follows a modular architecture with clear separation of concerns:
 ### Data Flow Architecture
 
 ```mermaid
-%%{init: { 'theme': 'default' }}%%
 flowchart TD
    A[User] -->|Uploads Transaction Logs| B[Streamlit App]
    B -->|Reads Data| C[parsing_utils.py]
