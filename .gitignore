@@ -29,3 +29,6 @@ output/sequence_modeling/
 output/isolation_forest/
 output/rule_based
 README copy.md
+*.xml
+.pytest_cache
+htmlcov

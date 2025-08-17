@@ -133,6 +133,7 @@ class TestAnomalyDetection:
             "is_new_device": [1, 0, 1, 0],
             "is_new_location": [1, 1, 0, 0],
             "time_diff_hours": [100, 50, 10, 5],
+            "anomaly_label": [1, 1, 0, 0],  # <-- Add this line
         }
         df = pd.DataFrame(data)
         result = explain_anomalies(df, top_n=2)
