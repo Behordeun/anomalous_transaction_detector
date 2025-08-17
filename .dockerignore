@@ -67,3 +67,6 @@ docs/
 
 # Logs
 *.log
+
+# Tests
+tests/
