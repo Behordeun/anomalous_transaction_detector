@@ -498,14 +498,15 @@ def _create_box_plots(dataframe: pd.DataFrame, output_dir: str, method: str) -> 
         ("device", "amount_by_device_boxplot.html", "Amount Distribution by Device"),
     ]
 
-    # Add location box plot
-    location_col = (
-        "location_norm" if "location_norm" in dataframe.columns else "location"
-    )
+    # Add location box plot (always use normalized version)
+    location_col = "location_norm"
     if location_col in dataframe:
+        # For display, make a capitalized version for prettier labels
+        dataframe = dataframe.copy()
+        dataframe["location_display"] = dataframe[location_col].str.title()
         box_plot_configs.append(
             (
-                location_col,
+                "location_display",
                 "amount_by_location_boxplot.html",
                 "Amount Distribution by Location",
             )
@@ -527,7 +528,7 @@ def _create_box_plots(dataframe: pd.DataFrame, output_dir: str, method: str) -> 
                 title=f"{title} - {method.title()}",
                 color_discrete_map=COLOR_MAP,
             )
-            if col in ["device", location_col, "user"]:
+            if col in ["device", "location_display", "user"]:
                 fig.update_xaxes(tickangle=45)
             fig.write_html(os.path.join(output_dir, filename))
 
@@ -542,14 +543,14 @@ def _create_grouped_bar_charts(
         ("user", "user_anomaly_grouped.html", "User-level Anomaly Frequency"),
     ]
 
-    # Add location bar chart
-    location_col = (
-        "location_norm" if "location_norm" in dataframe.columns else "location"
-    )
+    # Add location bar chart (always use normalized version)
+    location_col = "location_norm"
     if location_col in dataframe:
+        dataframe = dataframe.copy()
+        dataframe["location_display"] = dataframe[location_col].str.title()
         bar_chart_configs.append(
             (
-                location_col,
+                "location_display",
                 "location_anomaly_grouped.html",
                 "Anomaly Frequency by Location",
             )
@@ -571,7 +572,7 @@ def _create_grouped_bar_charts(
                 color_discrete_map=COLOR_MAP,
                 barmode="group",
             )
-            if col in ["device", location_col, "user"]:
+            if col in ["device", "location_display", "user"]:
                 fig.update_xaxes(tickangle=45)
             fig.write_html(os.path.join(output_dir, filename))
 

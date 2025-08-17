@@ -4,6 +4,7 @@ numpy
 scikit-learn
 plotly
 streamlit
+kaleido
 jupyter
 
 # Data processing
