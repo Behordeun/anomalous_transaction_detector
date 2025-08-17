@@ -167,7 +167,8 @@ endif
 
 lint: ## Run code linting
 	@echo "$(BLUE)Running linting...$(NC)"
-	@$(PYTHON_EXE) -m flake8 *.py --max-line-length=88 --extend-ignore=E203,W503 || echo "$(YELLOW)flake8 not installed$(NC)"
+	@$(PYTHON_EXE) -m flake8 --version >/dev/null 2>&1 || { echo "$(YELLOW)flake8 not installed$(NC)"; exit 1; }
+	@$(PYTHON_EXE) -m flake8 *.py --max-line-length=88 --extend-ignore=E203,W503
 	@$(PYTHON_EXE) -m mypy *.py --ignore-missing-imports || echo "$(YELLOW)mypy not installed$(NC)"
 
 format: ## Format code with black

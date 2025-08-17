@@ -7,7 +7,6 @@ from dateutil import parser as date_parser
 
 from errorlogger import system_logger
 
-
 ###############################################################################
 # Parsing functions
 ###############################################################################
