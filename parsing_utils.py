@@ -8,6 +8,11 @@ from dateutil import parser as date_parser
 from errorlogger import system_logger
 
 
+###############################################################################
+# Parsing functions
+###############################################################################
+
+
 def parse_datetime(dt_str: str) -> Optional[datetime]:
     """Parse a date/time string into a :class:`datetime` object.
 
@@ -44,11 +49,6 @@ def parse_datetime(dt_str: str) -> Optional[datetime]:
         return date_parser.parse(dt_str, dayfirst=dayfirst)
     except (ValueError, TypeError):
         return None
-
-
-###############################################################################
-# Parsing functions
-###############################################################################
 
 
 def parse_triple_colon(log: str) -> Optional[Dict[str, Any]]:
@@ -320,7 +320,6 @@ def parse_log(log: str) -> Optional[Dict[str, Any]]:
     dict or None
         Parsed components or None if no pattern matches.
     """
-    import pandas as pd
 
     if pd.isna(log) or not isinstance(log, str):
         return None

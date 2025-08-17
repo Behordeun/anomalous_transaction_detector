@@ -89,7 +89,31 @@ def convert_amount(val: Union[str, int, float]) -> Tuple[float, Optional[str]]:
 
 
 def _safe_convert_amount(val: Union[str, int, float]) -> Tuple[float, str]:
-    """Safely convert amount with error handling."""
+    """
+    Safely convert a raw amount value to a numeric value and currency code, with error handling and logging.
+
+    This function wraps `convert_amount` to ensure robust conversion of currency-prefixed strings, integers, or floats
+    into a tuple of (amount, currency). It handles malformed inputs, missing currency codes, and logs errors for invalid
+    results or exceptions. If conversion fails, it returns (np.nan, "UNKNOWN").
+
+    Args:
+        val (str | int | float): Raw amount value, possibly with a currency symbol.
+
+    Returns:
+        Tuple[float, str]:
+            - amount: Numeric value (float), np.nan if conversion fails.
+            - currency: Currency code (str), "UNKNOWN" if not detected or conversion fails.
+
+    Logging:
+        - Logs errors if the result from `convert_amount` is invalid or if an exception occurs during conversion.
+        - Adds context information for debugging.
+
+    Example:
+            _safe_convert_amount("£2428.72")
+            (2428.72, "GBP")
+            _safe_convert_amount("invalid")
+            (nan, "UNKNOWN")
+    """
     try:
         result = convert_amount(val)
         if isinstance(result, tuple) and len(result) == 2:
@@ -114,7 +138,43 @@ def _safe_convert_amount(val: Union[str, int, float]) -> Tuple[float, str]:
 
 
 def _add_basic_features(dataframe: pd.DataFrame) -> pd.DataFrame:
-    """Add basic temporal and currency features."""
+    """
+    Add basic temporal, categorical, and currency features to a transaction DataFrame.
+
+    This function extracts and engineers essential features from raw transaction logs, including timestamp parsing,
+    currency normalization, and categorical encoding. It ensures all required columns are present, fills missing values
+    with the mode or 'UNKNOWN', and standardizes transaction types. The function is robust to missing or malformed data
+    and prepares the DataFrame for downstream anomaly detection and analysis.
+
+    Args:
+        dataframe (pd.DataFrame): Input DataFrame containing raw transaction logs with columns such as 'timestamp',
+            'amount', 'type', 'location', and 'device'.
+
+    Returns:
+        pd.DataFrame: DataFrame with added features:
+            - 'dt': Parsed datetime object
+            - 'amount_value': Numeric transaction amount
+            - 'currency': Standardized currency code
+            - 'hour', 'weekday', 'day_of_month', 'month': Temporal features
+            - 'type': Lowercased transaction type
+            - All required columns present and filled
+
+    Feature Engineering Steps:
+        - Parses timestamps to datetime
+        - Converts amount to numeric value and currency code
+        - Extracts hour, weekday, day, and month from datetime
+        - Standardizes transaction type to lowercase
+        - Ensures all required columns exist and fills missing values
+
+    Error Handling:
+        - Fills missing or malformed columns with 'UNKNOWN' or mode value
+        - Robust to missing data and unexpected formats
+
+    Example:
+            df = pd.DataFrame({'timestamp': ['2023-05-14 14:05:31'], 'amount': ['£500'], 'type': ['withdrawal'], 'location': ['Liverpool'], 'device': ['Samsung']})
+            _add_basic_features(df)
+        # Returns DataFrame with engineered features
+    """
     dataframe = dataframe.copy()
     dataframe["dt"] = dataframe["timestamp"].apply(parse_datetime)
 
@@ -143,7 +203,39 @@ def _add_basic_features(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 
 def _add_sequential_features(dataframe: pd.DataFrame) -> pd.DataFrame:
-    """Add sequential features based on user transaction history."""
+    """
+    Add sequential and behavioral features based on user transaction history.
+
+    This function engineers features that capture temporal gaps, device changes, and location changes in user transactions.
+    It computes the time difference between consecutive transactions, flags new device and location usage, and fills missing
+    time gaps with the median. These features are essential for detecting behavioral anomalies and rare patterns in financial logs.
+
+    Args:
+        dataframe (pd.DataFrame): Input DataFrame with parsed transaction logs, including 'user' and 'dt' columns.
+
+    Returns:
+        pd.DataFrame: DataFrame with added features:
+            - 'prev_dt': Previous transaction datetime per user
+            - 'time_diff_hours': Time gap (in hours) between transactions
+            - 'prev_device': Previous device used per user
+            - 'prev_location': Previous location used per user
+            - 'is_new_device': Flag for new device usage (1=new, 0=same)
+            - 'is_new_location': Flag for new location usage (1=new, 0=same)
+
+    Feature Engineering Steps:
+        - Sorts transactions by user and datetime
+        - Computes time difference between consecutive transactions
+        - Flags new device and location usage
+        - Fills missing time gaps with the median
+
+    Error Handling:
+        - Robust to missing or malformed data; fills missing time gaps with the median
+
+    Example:
+            df = pd.DataFrame({'user': [1,1], 'dt': [pd.Timestamp('2023-05-14 14:05:31'), pd.Timestamp('2023-05-14 16:05:31')], 'device': ['A','B'], 'location': ['X','Y']})
+            _add_sequential_features(df)
+        Returns DataFrame with sequential features
+    """
     dataframe = dataframe.sort_values(["user", "dt"])
     dataframe["prev_dt"] = dataframe.groupby("user")["dt"].shift(1)
     dataframe["time_diff_hours"] = (
@@ -291,6 +383,10 @@ def score_anomalies(model: IsolationForest, features: np.ndarray) -> np.ndarray:
 
 def _build_explanation(row: pd.Series, time_threshold: float) -> str:
     """Build explanation for anomalous transaction."""
+    # Return simple message for normal transactions
+    if row["anomaly_label"] == 0:
+        return "Normal Pattern"
+
     reasons = []
 
     if row["amount_z_user"] > AMOUNT_Z_THRESHOLD:
@@ -303,7 +399,11 @@ def _build_explanation(row: pd.Series, time_threshold: float) -> str:
         reasons.append("unusual time gap since last txn")
 
     if reasons:
-        return "; ".join(reasons)
+        # Normalize capitalization: first letter of each sentence (delimited by ';') uppercase
+        explanation = "; ".join(reasons)
+        parts = explanation.split("; ")
+        normalized_parts = [part.strip().capitalize() for part in parts]
+        return "; ".join(normalized_parts)
 
     return (
         "Anomaly detected: This transaction does not match typical patterns "
@@ -843,9 +943,21 @@ def isolation_forest_anomaly_detection(
         raise ValueError("Feature matrix is empty after preparation.")
 
     df_features = train_and_score(df_features, features, contamination)
+    df_features["anomaly_status"] = df_features["anomaly_label"].map(
+        {0: "Normal", 1: "Anomaly"}
+    )
 
-    # Interpretation and visualization
-    explained = explain_anomalies(df_features, top_n=top_n)
+    # Add explanation for all rows
+    time_threshold = df_features["time_diff_hours"].quantile(TIME_PERCENTILE)
+    df_features["explanation"] = df_features.apply(
+        lambda row: _build_explanation(row, time_threshold), axis=1
+    )
+
+    # Interpretation and visualization (top anomalies)
+    explained = (
+        df_features.sort_values("anomaly_score", ascending=False).head(top_n).copy()
+    )
+    # Already has 'explanation' column
     save_explained_anomalies(explained, method_output_dir, NUMERIC_COLUMNS)
 
     create_visualisations(df_features, output_dir=method_output_dir, method=method)
@@ -859,7 +971,27 @@ def isolation_forest_anomaly_detection(
 def rule_based_anomaly_detection(
     dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
-    """Rule-based anomaly detection: high amount + new location."""
+    """
+    Detects anomalies in financial transactions using a rule-based approach.
+    Flags transactions as anomalous if the amount exceeds a threshold and the location is new for the user.
+
+    Args:
+        dataframe (pd.DataFrame): Input DataFrame containing transaction logs with columns 'user', 'amount', 'location', and 'timestamp'.
+        _top_n (int, optional): Number of top anomalies to consider (not used in this function).
+
+    Returns:
+        pd.DataFrame: DataFrame with additional columns for anomaly label, score, status, and explanation.
+
+    Side Effects:
+        None.
+
+    Raises:
+        None.
+
+    Example:
+            rule_based_anomaly_detection(df)
+        Returns a DataFrame with anomaly columns added.
+    """
     dataframe = dataframe.copy()
 
     # Extract numeric amount using the same logic as feature engineering
@@ -896,7 +1028,27 @@ def rule_based_anomaly_detection(
 def sequence_modeling_anomaly_detection(
     dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
-    """Sequence modeling: flag rare location transitions."""
+    """
+    Detects anomalies by flagging rare location transitions for each user.
+    Flags transactions as anomalous if the location transition is rare based on historical data.
+
+    Args:
+        dataframe (pd.DataFrame): Input DataFrame containing transaction logs with columns 'user', 'amount', 'location', and 'timestamp'.
+        _top_n (int, optional): Number of top anomalies to consider (not used in this function).
+
+    Returns:
+        pd.DataFrame: DataFrame with additional columns for anomaly label, score, status, and explanation.
+
+    Side Effects:
+        None.
+
+    Raises:
+        None.
+
+    Example:
+            sequence_modeling_anomaly_detection(df)
+        Returns a DataFrame with anomaly columns added.
+    """
     dataframe = dataframe.copy()
 
     # Add amount_value for visualization compatibility
@@ -940,7 +1092,27 @@ def sequence_modeling_anomaly_detection(
 def embedding_autoencoder_anomaly_detection(
     dataframe: pd.DataFrame, _top_n: int = 20
 ) -> pd.DataFrame:
-    """Embedding + autoencoder: PCA reconstruction error on text fields."""
+    """
+    Detects anomalies using PCA-based reconstruction error on embedded text fields.
+    Flags transactions as anomalous if the reconstruction error exceeds a percentile threshold.
+
+    Args:
+        dataframe (pd.DataFrame): Input DataFrame containing transaction logs with text fields ('type', 'location', 'device').
+        _top_n (int, optional): Number of top anomalies to consider (not used in this function).
+
+    Returns:
+        pd.DataFrame: DataFrame with additional columns for anomaly label, score, status, and explanation.
+
+    Side Effects:
+        None.
+
+    Raises:
+        None.
+
+    Example:
+            embedding_autoencoder_anomaly_detection(df)
+        Returns a DataFrame with anomaly columns added.
+    """
     dataframe = dataframe.copy()
 
     # Add amount_value for visualization compatibility
@@ -956,7 +1128,7 @@ def embedding_autoencoder_anomaly_detection(
     scaler = StandardScaler()
     x_scaled = scaler.fit_transform(features)
 
-    pca = PCA(n_components=min(10, x_scaled.shape[1]))
+    pca = PCA(n_components=min(10, x_scaled.shape[1]), random_state=42)
     x_pca = pca.fit_transform(x_scaled)
     x_reconstructed = pca.inverse_transform(x_pca)
 
@@ -979,7 +1151,25 @@ def embedding_autoencoder_anomaly_detection(
 
 
 def main() -> None:
-    """Main entry point for command-line execution."""
+    """
+    Main entry point for command-line execution of the anomaly detection pipeline.
+    Parses command-line arguments, selects the anomaly detection method, and saves results and visualizations.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+
+    Side Effects:
+        Reads input files, writes output files, logs analysis status, and may create directories.
+
+    Raises:
+        SystemExit: If required arguments are missing or invalid.
+
+    Example:
+        $ python analysis.py --input data.csv --output_dir output --method isolation_forest
+    """
     parser = argparse.ArgumentParser(
         description="Detect anomalous financial transactions from raw logs."
     )

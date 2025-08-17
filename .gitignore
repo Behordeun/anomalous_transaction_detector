@@ -12,8 +12,6 @@ __pycache__/
 .DS_Store
 .codacy
 *.html
-parse_logs.csv
-parsed_logs.csv
 calc_failed_parse_pct.py
 *.logs
 *.log
@@ -26,3 +24,7 @@ logs
 coverage
 .coverage.*
 nul
+output/embedding_autoencoder/
+output/sequence_modeling/
+output/isolation_forest/
+output/rule_based
