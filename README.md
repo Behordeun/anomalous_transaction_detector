@@ -59,7 +59,7 @@
 
 ## Executive Summary
 
-This production-ready anomaly detection system monitors financial transactions by processing unstructured logs, extracting meaningful features, and identifying suspicious patterns using four detection algorithms. The system features enterprise-level architecture with robust logging, comprehensive error handling, interactive visualization, and multiple deployment options including a live web interface.
+This anomaly detection system monitors financial transactions by processing unstructured logs, extracting meaningful features, and identifying suspicious patterns using four detection algorithms. The system features enterprise-level architecture with robust logging, comprehensive error handling, interactive visualization, and multiple deployment options including a live web interface using Streamlit.
 
 ## Anomaly Detection Methods
 
@@ -194,7 +194,7 @@ python analysis.py --input [your_data_set] --method embedding_autoencoder
 python analysis.py --input [your_data_set] --contamination 0.05 --top_n 50 --method [your_preferred_method]
 ```
 
-*NB:* You can use either of `CSV`, `XLSX` or `XLS` files.
+***NB:*** You can use any of `CSV`, `XLSX` or `XLS` files.
 
 ### Docker
 
@@ -340,9 +340,9 @@ The system implements four distinct detection approaches:
 
 **Explanation Categories**:
 
-- Amount-based: "amount far above user average"
-- Behavioral: "first time using device", "unseen location"
-- Temporal: "unusual time gap since last transaction"
+- Amount-based: "Amount far above user average"
+- Behavioral: "First time using device", "Unseen location"
+- Temporal: "Unusual time gap since last transaction"
 
 ### 5. Interactive User Interface (`streamlit_app.py`)
 
@@ -385,7 +385,6 @@ The system implements four distinct detection approaches:
 .
 ├── analysis.py
 ├── anomaly_detection.ipynb
-├── coverage.xml
 ├── data
 │   ├── synthetic_dirty_transaction_logs.csv
 │   └── synthetic_dirty_transaction_logs.xlsx
@@ -400,16 +399,20 @@ The system implements four distinct detection approaches:
 │   ├── isolation_forest/
 │   ├── jupyter_output
 │   │   ├── embedding_autoencoder_anomalies.csv
+│   │   ├── embedding_autoencoder_result.csv
 │   │   ├── isolation_forest_anomalies.csv
+│   │   ├── isolation_forest_result.csv
 │   │   ├── parsed_logs.csv
 │   │   ├── rule_based_anomalies.csv
-│   │   └── sequence_modeling_anomalies.csv
+│   │   ├── rule_based_result.csv
+│   │   ├── sequence_modeling_anomalies.csv
+│   │   └── sequence_modeling_result.csv
 │   ├── rule_based/
 │   └── sequence_modeling/
-├── parsed_logs.csv
 ├── parsing_utils.py
 ├── pyproject.toml
 ├── pytest.ini
+├── README copy.md
 ├── README.md
 ├── requirements-dev.txt
 ├── requirements.txt
