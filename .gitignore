@@ -19,7 +19,7 @@ cli_parse_logs.py
 image
 .vscode
 diagnostic_parsing_report.csv
-logs
+logs/
 *.coverage
 coverage
 .coverage.*
@@ -28,3 +28,4 @@ output/embedding_autoencoder/
 output/sequence_modeling/
 output/isolation_forest/
 output/rule_based
+.dockerignore
