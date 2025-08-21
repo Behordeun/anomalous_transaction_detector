@@ -32,3 +32,7 @@ README copy.md
 *.xml
 .pytest_cache
 htmlcov
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
